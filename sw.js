@@ -1,4 +1,4 @@
-const CACHE_NAME = "se-calculator-2026-07-v2";
+const CACHE_NAME = "se-calculator-2026-07-v3";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
