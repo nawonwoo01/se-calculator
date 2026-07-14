@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12385f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>SE ASM/Sedative Calculator</title>
+  <style>
+    :root {
+      --nav: #12385f;
+      --ink: #18212f;
+      --muted: #627083;
+      --line: #ccd5df;
+      --panel: #ffffff;
+      --bg: #f4f6f8;
+      --blue: #1f6fb7;
+      --green: #0f766e;
+      --red: #a32020;
+      --gold: #8a6500;
+      --soft-blue: #eaf2fb;
+      --soft-red: #fff0f0;
+      --soft-gold: #fff7df;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--bg); }
+    header { background: var(--nav); color: #fff; padding: 14px 16px; position: sticky; top: 0; z-index: 5; box-shadow: 0 2px 10px #0002; }
+    .title { max-width: 1120px; margin: 0 auto; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    h1 { margin: 0; font-size: 18px; letter-spacing: 0; }
+    .meta { font-size: 12px; opacity: .82; white-space: nowrap; }
+    main { max-width: 1120px; margin: 0 auto; padding: 14px; }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px; }
+    .tab { border: 1px solid var(--line); background: #fff; color: var(--ink); padding: 9px 12px; border-radius: 7px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+    .tab.active { background: var(--nav); color: #fff; border-color: var(--nav); }
+    .grid { display: grid; grid-template-columns: 340px 1fr; gap: 14px; align-items: start; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; box-shadow: 0 1px 3px #0000000d; }
+    .panel h2 { margin: 0 0 10px; font-size: 16px; }
+    .panel h3 { margin: 14px 0 8px; font-size: 14px; color: var(--nav); }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input, select { width: 100%; min-height: 38px; border: 1px solid var(--line); border-radius: 7px; padding: 8px 10px; font-size: 15px; background: #fff; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .field { margin-bottom: 10px; }
+    .pillbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; }
+    .pill { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
+    .pill.active { background: var(--soft-blue); color: var(--nav); border-color: #9fc3e4; font-weight: 700; }
+    .result { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+    .metric { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fbfcfe; }
+    .metric .k { color: var(--muted); font-size: 12px; }
+    .metric .v { font-size: 20px; font-weight: 800; margin-top: 2px; color: var(--nav); overflow-wrap: anywhere; }
+    table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
+    th, td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #e8eef5; color: var(--nav); }
+    .note { border-left: 4px solid var(--blue); background: var(--soft-blue); padding: 10px; border-radius: 6px; font-size: 13px; line-height: 1.45; }
+    .warn { border-left-color: var(--gold); background: var(--soft-gold); }
+    .danger { border-left-color: var(--red); background: var(--soft-red); }
+    .small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .hidden { display: none; }
+    .checks { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .check { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--line); padding: 8px; border-radius: 7px; background: #fff; font-size: 13px; }
+    .check input { width: auto; min-height: 0; margin-top: 2px; }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .result { grid-template-columns: 1fr; }
+      .row, .row3, .checks { grid-template-columns: 1fr; }
+      .title { display: block; }
+      .meta { display: block; margin-top: 3px; }
+      main { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>SE ASM/Sedative Calculator</h1>
+      <span class="meta">2026-07 reference · offline/PWA ready</span>
+    </div>
+  </header>
+  <main>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="sedation">Sedative</button>
+      <button class="tab" data-tab="asm">ASM loading</button>
+      <button class="tab" data-tab="warnings">Warnings</button>
+      <button class="tab" data-tab="scores">Scores</button>
+      <button class="tab" data-tab="refs">Evidence</button>
+    </div>
+
+    <section id="sedation" class="view">
+      <div class="grid">
+        <aside class="panel">
+          <h2>Patient and mixture</h2>
+          <div class="row">
+            <div class="field"><label>Weight, kg</label><input id="wt" type="number" value="60" min="1" step="0.1"></div>
+            <div class="field"><label>Height, cm</label><input id="ht" type="number" value="170" min="40" step="0.1"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Sex</label><select id="sex"><option value="male">Male</option><option value="female">Female</option></select></div>
+            <div class="field"><label>Dosing weight</label><select id="dosingWeight"><option value="actual">Actual</option><option value="ibw">IBW</option><option value="lbw">LBW</option><option value="adj">AdjBW</option></select></div>
+          </div>
+          <div class="row3">
+            <div class="field"><label>Drug amount, mg</label><input id="mixMg" type="number" value="600" min="1"></div>
+            <div class="field"><label>Total volume, mL</label><input id="mixMl" type="number" value="500" min="1"></div>
+            <div class="field"><label>Rate dose</label><input id="rateDose" type="number" value="0.2" min="0" step="0.05"></div>
+          </div>
+          <div class="field"><label>Sedative</label><select id="sedDrug"></select></div>
+          <div class="pillbar" id="sedQuick"></div>
+          <div class="note warn">RSE continuous infusion은 airway, BP, ICU, continuous EEG 또는 가능한 EEG monitoring을 전제로 한다.</div>
+        </aside>
+        <div class="panel">
+          <h2>Infusion result</h2>
+          <div class="result">
+            <div class="metric"><div class="k">Dosing weight</div><div class="v" id="dwOut">-</div></div>
+            <div class="metric"><div class="k">Concentration</div><div class="v" id="concOut">-</div></div>
+            <div class="metric"><div class="k">Infusion rate</div><div class="v" id="rateOut">-</div></div>
+          </div>
+          <div class="result">
+            <div class="metric"><div class="k">Loading dose</div><div class="v" id="loadOut">-</div></div>
+            <div class="metric"><div class="k">Typical range</div><div class="v" id="rangeOut">-</div></div>
+            <div class="metric"><div class="k">Unit</div><div class="v" id="unitOut">-</div></div>
+          </div>
+          <h3>Rate table</h3>
+          <div id="rateTable"></div>
+          <h3>Notes</h3>
+          <div id="sedNotes" class="note"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="asm" class="view hidden">
+      <div class="grid">
+        <aside class="panel">
+          <h2>ASM loading</h2>
+          <div class="field"><label>ASM</label><select id="asmDrug"></select></div>
+          <div class="row">
+            <div class="field"><label>Dose preset</label><select id="asmDose"></select></div>
+            <div class="field"><label>Infusion minutes</label><input id="asmMinutes" type="number" value="10" min="1"></div>
+          </div>
+          <div class="field"><label>Dosing weight</label><select id="asmWeight"><option value="actual">Actual</option><option value="ibw">IBW</option><option value="lbw">LBW</option><option value="adj">AdjBW</option></select></div>
+          <div class="note">Second-line default: LEV 60 mg/kg, fPHT 20 mg PE/kg, VPA 40 mg/kg. 환자별 금기/부작용으로 선택.</div>
+        </aside>
+        <div class="panel">
+          <h2>Loading result</h2>
+          <div class="result">
+            <div class="metric"><div class="k">Dose</div><div class="v" id="asmDoseOut">-</div></div>
+            <div class="metric"><div class="k">Capped dose</div><div class="v" id="asmLoadOut">-</div></div>
+            <div class="metric"><div class="k">Approx mg/min</div><div class="v" id="asmRateOut">-</div></div>
+          </div>
+          <h3>Drug note</h3>
+          <div id="asmNote" class="note"></div>
+          <h3>Recommended set</h3>
+          <div id="asmAll"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="warnings" class="view hidden">
+      <div class="panel">
+        <h2>Patient-specific warning flags</h2>
+        <div class="checks" id="warningChecks"></div>
+        <h3>Triggered recommendations</h3>
+        <div id="warningOutput"></div>
+      </div>
+    </section>
+
+    <section id="scores" class="view hidden">
+      <div class="grid">
+        <aside class="panel">
+          <h2>Score inputs</h2>
+          <h3>SeLECT</h3>
+          <div class="field"><label>NIHSS</label><select id="selectNihss"><option value="0">0-3</option><option value="1">4-10</option><option value="2">>=11</option></select></div>
+          <label class="check"><input id="selectLaa" type="checkbox"> Large-artery atherosclerosis</label>
+          <label class="check"><input id="selectEarly" type="checkbox"> Early seizure within 7 days</label>
+          <label class="check"><input id="selectCortical" type="checkbox"> Cortical involvement</label>
+          <label class="check"><input id="selectMca" type="checkbox"> MCA territory</label>
+          <h3>CAVE</h3>
+          <label class="check"><input id="caveCortical" type="checkbox"> Cortical involvement</label>
+          <label class="check"><input id="caveAge" type="checkbox"> Age &lt;65</label>
+          <label class="check"><input id="caveVolume" type="checkbox"> ICH volume &gt;10 mL</label>
+          <label class="check"><input id="caveEarly" type="checkbox"> Early seizure</label>
+          <h3>STESS quick</h3>
+          <label class="check"><input id="stessAge" type="checkbox"> Age >=65</label>
+          <label class="check"><input id="stessNoHx" type="checkbox"> No prior seizure history</label>
+          <div class="field"><label>Worst seizure type</label><select id="stessType"><option value="0">Focal/simple/absence</option><option value="1">Generalized convulsive</option><option value="2">NCSE in coma</option></select></div>
+          <div class="field"><label>Consciousness</label><select id="stessCon"><option value="0">Alert/somnolent</option><option value="1">Confused/stupor</option><option value="2">Coma</option></select></div>
+        </aside>
+        <div class="panel">
+          <h2>Score results</h2>
+          <div class="result">
+            <div class="metric"><div class="k">SeLECT</div><div class="v" id="selectOut">0</div></div>
+            <div class="metric"><div class="k">CAVE</div><div class="v" id="caveOut">0</div></div>
+            <div class="metric"><div class="k">STESS quick</div><div class="v" id="stessOut">0</div></div>
+          </div>
+          <div id="scoreNotes" class="note"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="refs" class="view hidden">
+      <div class="panel">
+        <h2>Evidence and formulas</h2>
+        <p class="small">Core dosing follows Glauser 2016 AES guideline, Brophy 2012 NCS guideline, Gettings 2025 Lancet Neurology review, Woodward 2025 older-adult review, and Joshi/Kapur 2025 Epilepsia Open review. ESETT supports comparable efficacy of levetiracetam, fosphenytoin, and valproate for benzodiazepine-refractory established SE.</p>
+        <table>
+          <thead><tr><th>Formula</th><th>Definition</th></tr></thead>
+          <tbody>
+            <tr><td>concentration</td><td>total drug mg / total volume mL</td></tr>
+            <tr><td>mL/hr</td><td>mg/kg/hr * dosing weight kg / concentration mg/mL</td></tr>
+            <tr><td>propofol conversion</td><td>mcg/kg/min * 0.06 = mg/kg/hr</td></tr>
+            <tr><td>loading</td><td>min(mg/kg * dosing weight, max dose)</td></tr>
+          </tbody>
+        </table>
+        <p class="small">This tool is an educational clinical decision support draft, not a prescribing order. Verify local protocols, product concentration, renal/hepatic function, pregnancy status, ECG/BP/airway monitoring, and EEG context.</p>
+      </div>
+    </section>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const round = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d).replace(/\\.0$/, '') : '-';
+    const sedatives = {
+      midazolam: { label: 'Midazolam', load: 0.2, unit: 'mg/kg/hr', range: '0.05-2 mg/kg/hr', quick: [0.05,0.1,0.2,0.5,1,2], notes: 'Use 0.2 mg/kg IV loading for RSE CIVAD. Watch hypotension, respiratory depression, accumulation with repeated dosing, renal dysfunction, obesity/older age, and tachyphylaxis.' },
+      ketamine: { label: 'Ketamine', load: 1, unit: 'mg/kg/hr', range: '1.5-10 mg/kg/hr', quick: [1,1.5,2,3,5,7.5,10], notes: 'NMDA antagonist. Consider as adjunct/alternative in RSE. Watch hypertension/tachycardia, secretions, laryngospasm, myocardial depression in cardiac disease, cholestatic hepatotoxicity.' },
+      propofol: { label: 'Propofol', load: 2, unit: 'mcg/kg/min', range: '20-200 mcg/kg/min', quick: [20,50,65,100,150,200], notes: 'Calculator converts mcg/kg/min to mg/kg/hr. PRIS risk rises with high dose/prolonged use. Monitor TG, CK, lactate, K, renal/liver markers. Avoid/caution mitochondrial disease and ketogenic diet.' },
+      pentobarbital: { label: 'Pentobarbital', load: 5, unit: 'mg/kg/hr', range: '0.5-5 mg/kg/hr', quick: [0.5,1,2,5], notes: 'Profound hypotension, respiratory depression, ileus, infection risk, loss of neuro exam. ICU/airway/vasopressor planning required.' },
+      thiopental: { label: 'Thiopental', load: 3, unit: 'mg/kg/hr', range: '0.5-5 mg/kg/hr', quick: [0.5,1,2,5], notes: 'Barbiturate anesthetic. Respiratory/cardiac depression and hypotension. Use institutional protocol.' }
+    };
+    const asms = {
+      lev: { label:'Levetiracetam', doses:[40,60], max:4500, unit:'mg', minutes:10, note:'Low interaction and hemodynamic risk. Adjust maintenance in renal impairment; consider dialysis supplement.' },
+      fpht: { label:'Fosphenytoin', doses:[20], max:1500, unit:'mg PE', minutes:10, note:'Dose in phenytoin equivalents. ECG/BP monitoring. Avoid/caution Dravet, sodium-channel toxin, conduction disease.' },
+      pht: { label:'Phenytoin', doses:[20], max:1500, unit:'mg', minutes:30, note:'NS only. Avoid D5W and feeding tube. Purple glove/extravasation, hypotension, arrhythmia; TDM needed.' },
+      vpa: { label:'Valproate', doses:[20,30,40], max:3000, unit:'mg', minutes:20, note:'Minimal hypotension/respiratory depression. Avoid severe hepatic disease, urea-cycle disorder; watch platelets, ammonia, pancreatitis. Carbapenems lower level.' },
+      pb: { label:'Phenobarbital', doses:[15,20], max:2000, unit:'mg', minutes:20, note:'Sedation, respiratory depression, hypotension. Older adults have reduced clearance.' },
+      lac: { label:'Lacosamide', fixed:[200,400], max:400, unit:'mg', minutes:10, note:'Fixed loading option. Watch PR prolongation, AV block, bradyarrhythmia, cardiac disease/AV blockers.' }
+    };
+    const warningItems = [
+      ['renal','Renal impairment', 'LEV maintenance adjustment; midazolam active metabolite accumulation; consider dialysis supplement where relevant.'],
+      ['hepatic','Severe hepatic disease', 'Avoid/caution valproate; sedative metabolism may be prolonged.'],
+      ['platelet','Thrombocytopenia/coagulopathy', 'Avoid/caution valproate.'],
+      ['preg','Pregnancy/childbearing potential', 'Avoid chronic valproate when possible; single rescue dose requires specialist judgment.'],
+      ['cardiac','Conduction disease/AV block', 'Avoid/caution phenytoin, fosphenytoin, lacosamide; ECG/BP monitoring.'],
+      ['shock','Shock/hypotension', 'Prefer LEV/VPA when clinically appropriate; caution PHT/fPHT/PB/propofol/barbiturate.'],
+      ['dravet','Dravet or sodium-channel toxin', 'Avoid sodium-channel blockers such as PHT/fPHT and often lacosamide.'],
+      ['carbapenem','Carbapenem use', 'Avoid valproate or expect major level reduction.']
+    ];
+    function weights() {
+      const wt = +$('wt').value || 0, ht = +$('ht').value || 0, sex = $('sex').value;
+      const inches = ht / 2.54;
+      const ibw = Math.max(0, (sex === 'male' ? 50 : 45.5) + 2.3 * (inches - 60));
+      const lbw = sex === 'male' ? (9270 * wt) / (6680 + 216 * (wt / ((ht/100)**2))) : (9270 * wt) / (8780 + 244 * (wt / ((ht/100)**2)));
+      const adj = wt > ibw ? ibw + 0.4 * (wt - ibw) : wt;
+      return { actual: wt, ibw, lbw, adj };
+    }
+    function selectedWeight(id) { const w = weights(); return w[$(id).value] || w.actual; }
+    function populate() {
+      $('sedDrug').innerHTML = Object.entries(sedatives).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('');
+      $('asmDrug').innerHTML = Object.entries(asms).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('');
+      $('warningChecks').innerHTML = warningItems.map(([id,label]) => `<label class="check"><input id="warn_${id}" type="checkbox"> ${label}</label>`).join('');
+    }
+    function calcSed() {
+      const drug = sedatives[$('sedDrug').value], dw = selectedWeight('dosingWeight'), conc = (+$('mixMg').value || 0) / (+$('mixMl').value || 1);
+      let dose = +$('rateDose').value || 0;
+      const doseMgKgHr = drug.unit === 'mcg/kg/min' ? dose * 0.06 : dose;
+      const mlhr = doseMgKgHr * dw / conc;
+      $('dwOut').textContent = `${round(dw,1)} kg`;
+      $('concOut').textContent = `${round(conc,2)} mg/mL`;
+      $('rateOut').textContent = `${round(mlhr,1)} mL/hr`;
+      $('loadOut').textContent = `${round(drug.load * dw,1)} mg`;
+      $('rangeOut').textContent = drug.range;
+      $('unitOut').textContent = drug.unit;
+      $('sedNotes').textContent = drug.notes;
+      $('sedQuick').innerHTML = drug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${x} ${drug.unit}</button>`).join('');
+      $('sedQuick').querySelectorAll('button').forEach(b => b.onclick = () => { $('rateDose').value = b.dataset.dose; calcSed(); });
+      const rows = drug.quick.map(x => {
+        const mgkg = drug.unit === 'mcg/kg/min' ? x * 0.06 : x;
+        return `<tr><td>${x} ${drug.unit}</td><td>${round(mgkg,2)} mg/kg/hr</td><td>${round(mgkg * dw / conc,1)} mL/hr</td></tr>`;
+      }).join('');
+      $('rateTable').innerHTML = `<table><thead><tr><th>Dose</th><th>Converted</th><th>Rate</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+    function updateAsmDoseOptions() {
+      const d = asms[$('asmDrug').value];
+      const opts = d.fixed ? d.fixed.map(x => `<option value="fixed:${x}">${x} ${d.unit}</option>`) : d.doses.map(x => `<option value="kg:${x}">${x} mg/kg</option>`);
+      $('asmDose').innerHTML = opts.join('');
+      $('asmMinutes').value = d.minutes;
+      calcAsm();
+    }
+    function calcAsm() {
+      const d = asms[$('asmDrug').value], dw = selectedWeight('asmWeight');
+      const [kind, raw] = $('asmDose').value.split(':');
+      const val = +raw;
+      const uncapped = kind === 'fixed' ? val : val * dw;
+      const capped = Math.min(uncapped, d.max);
+      const mins = +$('asmMinutes').value || d.minutes;
+      $('asmDoseOut').textContent = kind === 'fixed' ? `${val} ${d.unit}` : `${val} mg/kg`;
+      $('asmLoadOut').textContent = `${round(capped,0)} ${d.unit}`;
+      $('asmRateOut').textContent = `${round(capped / mins,1)} ${d.unit}/min`;
+      $('asmNote').textContent = d.note;
+      $('asmAll').innerHTML = '<table><thead><tr><th>Drug</th><th>Default</th><th>Max</th><th>Calculated</th></tr></thead><tbody>' +
+        Object.entries(asms).map(([k,x]) => {
+          const defaultDose = x.fixed ? x.fixed[x.fixed.length-1] : x.doses[x.doses.length-1];
+          const amount = x.fixed ? defaultDose : defaultDose * dw;
+          return `<tr><td>${x.label}</td><td>${x.fixed ? defaultDose + ' ' + x.unit : defaultDose + ' mg/kg'}</td><td>${x.max} ${x.unit}</td><td>${round(Math.min(amount, x.max),0)} ${x.unit}</td></tr>`;
+        }).join('') + '</tbody></table>';
+    }
+    function calcWarnings() {
+      const active = warningItems.filter(([id]) => $(`warn_${id}`)?.checked);
+      $('warningOutput').innerHTML = active.length ? active.map(([,label,msg]) => `<div class="note warn"><b>${label}</b><br>${msg}</div><br>`).join('') : '<div class="note">No warning flag selected.</div>';
+    }
+    function calcScores() {
+      const select = +$('selectNihss').value + ($('selectLaa').checked?1:0) + ($('selectEarly').checked?3:0) + ($('selectCortical').checked?2:0) + ($('selectMca').checked?1:0);
+      const cave = ['caveCortical','caveAge','caveVolume','caveEarly'].reduce((s,id)=>s+($(id).checked?1:0),0);
+      const stess = ($('stessAge').checked?2:0) + ($('stessNoHx').checked?1:0) + (+$('stessType').value) + (+$('stessCon').value);
+      $('selectOut').textContent = `${select}/9`;
+      $('caveOut').textContent = `${cave}/4`;
+      $('stessOut').textContent = `${stess}/6`;
+      const caveRisk = ['~0.6%','~3.6%','~9.8%','~34.8%','~46.2%'][cave];
+      $('scoreNotes').innerHTML = `CAVE estimated late seizure risk: <b>${caveRisk}</b>. SeLECT requires original risk table/nomogram for exact 1-year/5-year probability. STESS is for escalation/monitoring support, not treatment limitation.`;
+    }
+    function bind() {
+      document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+        btn.classList.add('active'); $(btn.dataset.tab).classList.remove('hidden');
+      });
+      ['wt','ht','sex','dosingWeight','mixMg','mixMl','rateDose','sedDrug'].forEach(id => $(id).addEventListener('input', calcSed));
+      $('asmDrug').addEventListener('change', updateAsmDoseOptions);
+      ['asmDose','asmMinutes','asmWeight','wt','ht','sex'].forEach(id => $(id).addEventListener('input', calcAsm));
+      warningItems.forEach(([id]) => $(`warn_${id}`).addEventListener('change', calcWarnings));
+      document.querySelectorAll('#scores input,#scores select').forEach(el => el.addEventListener('input', calcScores));
+      if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js');
+    }
+    populate(); updateAsmDoseOptions(); bind(); calcSed(); calcAsm(); calcWarnings(); calcScores();
+  </script>
+</body>
+</html>
