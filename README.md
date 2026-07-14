@@ -32,6 +32,20 @@ python -m http.server 8787
 - LEV/fPHT/PHT/VPA/PB/LAC loading dose와 maximum cap
 - 환자별 contraindication/warning flag
 - SeLECT, CAVE, STESS quick score
+- Android/iOS 홈 화면 추가 안내
+- Admin 탭: 약제 파라미터, 근거 문구를 JSON으로 로컬 수정/내보내기/가져오기
+
+## Admin 탭 안내
+
+GitHub Pages 버전은 정적 웹앱이므로 Admin 탭에서 저장한 값은 현재 브라우저의 `localStorage`에 저장됩니다.
+모든 사용자에게 기본값으로 배포하려면 export한 JSON을 바탕으로 `index.html`의 기본 설정을 업데이트해야 합니다.
+
+## Author
+
+Wonwoo Lee, M.D.  
+Assistant Professor  
+Department of Neurology, Yongin Severance Hospital, Yonsei University College of Medicine  
+363, Dongbaekjukjeon-daero, Giheung-gu, Yongin-si, Gyeonggi-do, Republic of Korea
 
 ## 주의
 
