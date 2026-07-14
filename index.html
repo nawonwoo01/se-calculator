@@ -124,7 +124,7 @@
           </div>
           <div class="row3">
             <div class="field"><label>Drug amount, mg</label><input id="mixMg" type="number" value="600" min="1"></div>
-            <div class="field"><label>Total volume, mL</label><input id="mixMl" type="number" value="500" min="1"></div>
+            <div class="field"><label>Final mixed fluid volume, mL</label><input id="mixMl" type="number" value="500" min="1"></div>
             <div class="field"><label>Rate dose</label><input id="rateDose" type="number" value="0.2" min="0" step="0.05"></div>
           </div>
           <div class="field"><label>Sedatives to compare</label><div class="drug-checks" id="sedativeChecks"></div></div>
@@ -240,7 +240,7 @@
           <tbody>
             <tr><td>concentration</td><td>total drug mg / total volume mL</td></tr>
             <tr><td>mL/hr</td><td>mg/kg/hr * dosing weight kg / concentration mg/mL</td></tr>
-            <tr><td>propofol conversion</td><td>mcg/kg/min * 0.06 = mg/kg/hr</td></tr>
+            <tr><td>mg/kg/hr equivalent</td><td>공통 계산 단위. Propofol은 mcg/kg/min * 0.06 = mg/kg/hr로 환산.</td></tr>
             <tr><td>loading</td><td>min(mg/kg * dosing weight, max dose)</td></tr>
           </tbody>
         </table>
@@ -458,7 +458,7 @@
           return `<tr><td style="border-left:6px solid ${drug.color || '#1f6fb7'}"><b>${drug.label}</b></td><td>${x} ${drug.unit}</td><td>${round(mgkg,2)} mg/kg/hr</td><td>${round(mgkg * dw / conc,1)} mL/hr</td></tr>`;
         });
       }).join('');
-      $('rateTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Drug</th><th>Dose</th><th>Converted</th><th>Infusion rate</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      $('rateTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Drug</th><th>Dose</th><th>mg/kg/hr equivalent</th><th>Infusion rate</th></tr></thead><tbody>${rows}</tbody></table></div>`;
       $('sedNotes').innerHTML = keys.map(k => {
         const drug = sedatives[k];
         return `<div class="drug-note" style="border-left-color:${drug.color || '#1f6fb7'}"><b>${drug.label}</b><br>${drug.notes}</div>`;
