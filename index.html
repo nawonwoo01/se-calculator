@@ -45,6 +45,10 @@
     .pillbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; }
     .pill { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 10px; cursor: pointer; font-size: 12px; }
     .pill.active { background: var(--soft-blue); color: var(--nav); border-color: #9fc3e4; font-weight: 700; }
+    .drug-checks { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 8px 0 10px; }
+    .drug-chip { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-left-width: 6px; padding: 8px; border-radius: 7px; background: #fff; font-size: 13px; font-weight: 700; }
+    .drug-chip input { width: auto; min-height: 0; }
+    .drug-note { border: 1px solid var(--line); border-left-width: 6px; border-radius: 7px; padding: 9px; background: #fff; margin-bottom: 8px; font-size: 13px; line-height: 1.45; }
     .result { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
     .metric { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #fbfcfe; }
     .metric .k { color: var(--muted); font-size: 12px; }
@@ -52,10 +56,20 @@
     table { width: 100%; border-collapse: collapse; background: #fff; font-size: 13px; }
     th, td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
     th { background: #e8eef5; color: var(--nav); }
+    .table-wrap { max-height: 520px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; }
+    .table-wrap table { border: 0; }
+    .table-wrap th { position: sticky; top: 0; z-index: 1; }
     .note { border-left: 4px solid var(--blue); background: var(--soft-blue); padding: 10px; border-radius: 6px; font-size: 13px; line-height: 1.45; }
     .warn { border-left-color: var(--gold); background: var(--soft-gold); }
     .danger { border-left-color: var(--red); background: var(--soft-red); }
+    .install-box { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .button { border: 1px solid var(--nav); background: var(--nav); color: #fff; min-height: 38px; border-radius: 7px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+    .button.secondary { background: #fff; color: var(--nav); }
+    textarea { width: 100%; min-height: 180px; border: 1px solid var(--line); border-radius: 7px; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; line-height: 1.45; resize: vertical; }
+    footer { max-width: 1120px; margin: 0 auto; padding: 0 14px 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
     .small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .refs-list { padding-left: 20px; line-height: 1.55; }
+    .refs-list li { margin-bottom: 6px; }
     .hidden { display: none; }
     .checks { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
     .check { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--line); padding: 8px; border-radius: 7px; background: #fff; font-size: 13px; }
@@ -66,6 +80,7 @@
       .row, .row3, .checks { grid-template-columns: 1fr; }
       .title { display: block; }
       .meta { display: block; margin-top: 3px; }
+      .install-box { grid-template-columns: 1fr; }
       main { padding: 10px; }
     }
   </style>
@@ -84,6 +99,15 @@
       <button class="tab" data-tab="warnings">Warnings</button>
       <button class="tab" data-tab="scores">Scores</button>
       <button class="tab" data-tab="refs">Evidence</button>
+      <button class="tab" data-tab="admin">Admin</button>
+    </div>
+
+    <div class="install-box note">
+      <div>
+        <b>휴대폰 설치 안내</b><br>
+        Android Chrome은 버튼을 누르거나 메뉴에서 “홈 화면에 추가”를 선택하세요. iPhone Safari는 공유 버튼을 누른 뒤 “홈 화면에 추가”를 선택하세요.
+      </div>
+      <button id="installBtn" class="button">Install</button>
     </div>
 
     <section id="sedation" class="view">
@@ -103,7 +127,7 @@
             <div class="field"><label>Total volume, mL</label><input id="mixMl" type="number" value="500" min="1"></div>
             <div class="field"><label>Rate dose</label><input id="rateDose" type="number" value="0.2" min="0" step="0.05"></div>
           </div>
-          <div class="field"><label>Sedative</label><select id="sedDrug"></select></div>
+          <div class="field"><label>Sedatives to compare</label><div class="drug-checks" id="sedativeChecks"></div></div>
           <div class="pillbar" id="sedQuick"></div>
           <div class="note warn">RSE continuous infusion은 airway, BP, ICU, continuous EEG 또는 가능한 EEG monitoring을 전제로 한다.</div>
         </aside>
@@ -112,7 +136,7 @@
           <div class="result">
             <div class="metric"><div class="k">Dosing weight</div><div class="v" id="dwOut">-</div></div>
             <div class="metric"><div class="k">Concentration</div><div class="v" id="concOut">-</div></div>
-            <div class="metric"><div class="k">Infusion rate</div><div class="v" id="rateOut">-</div></div>
+            <div class="metric"><div class="k">Selected drugs</div><div class="v" id="rateOut">-</div></div>
           </div>
           <div class="result">
             <div class="metric"><div class="k">Loading dose</div><div class="v" id="loadOut">-</div></div>
@@ -199,7 +223,18 @@
     <section id="refs" class="view hidden">
       <div class="panel">
         <h2>Evidence and formulas</h2>
-        <p class="small">Core dosing follows Glauser 2016 AES guideline, Brophy 2012 NCS guideline, Gettings 2025 Lancet Neurology review, Woodward 2025 older-adult review, and Joshi/Kapur 2025 Epilepsia Open review. ESETT supports comparable efficacy of levetiracetam, fosphenytoin, and valproate for benzodiazepine-refractory established SE.</p>
+        <p class="small" id="evidenceText">Core dosing follows current guideline/review sources and ESETT evidence. The citation list below is formatted for quick reference and manuscript-style checking.</p>
+        <ol class="small refs-list">
+          <li>Glauser T, Shinnar S, Gloss D, et al. Evidence-based guideline: Treatment of convulsive status epilepticus in children and adults. <i>Epilepsy Curr</i>. 2016;16(1):48-61.</li>
+          <li>Brophy GM, Bell R, Claassen J, et al. Guidelines for the evaluation and management of status epilepticus. <i>Neurocrit Care</i>. 2012;17(1):3-23.</li>
+          <li>Trinka E, Cock H, Hesdorffer D, et al. A definition and classification of status epilepticus: Report of the ILAE Task Force. <i>Epilepsia</i>. 2015;56(10):1515-1523.</li>
+          <li>Kapur J, Elm J, Chamberlain JM, et al. Randomized trial of three anticonvulsant medications for status epilepticus. <i>N Engl J Med</i>. 2019;381(22):2103-2113.</li>
+          <li>Chamberlain JM, Kapur J, Shinnar S, et al. Efficacy of levetiracetam, fosphenytoin, and valproate for established status epilepticus by age group. <i>Lancet</i>. 2020;395(10231):1217-1224.</li>
+          <li>Woodward HJ, et al. Status epilepticus in older adults: A critical review. <i>Epilepsia</i>. 2025.</li>
+          <li>Joshi S, Kapur J. Status epilepticus: Updates on mechanisms and treatments. <i>Epilepsia Open</i>. 2025.</li>
+          <li>Galovic M, Dohler N, Erdelyi-Canavese B, et al. Prediction of late seizures after ischaemic stroke with a novel prognostic model: The SeLECT score. <i>Lancet Neurol</i>. 2018;17(2):143-152.</li>
+          <li>Haapaniemi E, Strbian D, Rossi C, et al. The CAVE score for predicting late seizures after intracerebral hemorrhage. <i>Stroke</i>. 2014;45(7):1971-1976.</li>
+        </ol>
         <table>
           <thead><tr><th>Formula</th><th>Definition</th></tr></thead>
           <tbody>
@@ -210,20 +245,57 @@
           </tbody>
         </table>
         <p class="small">This tool is an educational clinical decision support draft, not a prescribing order. Verify local protocols, product concentration, renal/hepatic function, pregnancy status, ECG/BP/airway monitoring, and EEG context.</p>
+        <h3>Author</h3>
+        <p class="small"><b>Wonwoo Lee, M.D.</b><br>Assistant Professor<br>Department of Neurology, Yongin Severance Hospital, Yonsei University College of Medicine<br>363, Dongbaekjukjeon-daero, Giheung-gu, Yongin-si, Gyeonggi-do, Republic of Korea</p>
+      </div>
+    </section>
+
+    <section id="admin" class="view hidden">
+      <div class="grid">
+        <aside class="panel">
+          <h2>Admin editor</h2>
+          <div class="note warn">정적 GitHub Pages 버전의 Admin은 서버 DB를 바꾸지 않고, 현재 브라우저의 localStorage 설정만 바꿉니다. 병원/전체 사용자에게 반영하려면 수정한 JSON을 repo의 `index.html` 기본값에 반영해야 합니다.</div>
+          <h3>Actions</h3>
+          <div class="pillbar">
+            <button id="saveConfig" class="button">Save local</button>
+            <button id="resetConfig" class="button secondary">Reset</button>
+            <button id="exportConfig" class="button secondary">Export JSON</button>
+          </div>
+          <div class="field"><label>Import JSON</label><textarea id="importConfig" placeholder="Export한 JSON을 여기에 붙여넣고 Import를 누르세요."></textarea></div>
+          <button id="applyImport" class="button secondary">Import</button>
+        </aside>
+        <div class="panel">
+          <h2>Editable configuration</h2>
+          <h3>Sedatives JSON</h3>
+          <textarea id="sedativeConfig"></textarea>
+          <h3>ASM JSON</h3>
+          <textarea id="asmConfig"></textarea>
+          <h3>Evidence text</h3>
+          <textarea id="evidenceConfig"></textarea>
+          <h3>Admin status</h3>
+          <div id="adminStatus" class="note">No local changes saved yet.</div>
+        </div>
       </div>
     </section>
   </main>
+  <footer>
+    <b>Wonwoo Lee, M.D.</b> · Assistant Professor, Department of Neurology, Yongin Severance Hospital, Yonsei University College of Medicine · 363, Dongbaekjukjeon-daero, Giheung-gu, Yongin-si, Gyeonggi-do, Republic of Korea
+  </footer>
   <script>
     const $ = (id) => document.getElementById(id);
-    const round = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d).replace(/\\.0$/, '') : '-';
-    const sedatives = {
-      midazolam: { label: 'Midazolam', load: 0.2, unit: 'mg/kg/hr', range: '0.05-2 mg/kg/hr', quick: [0.05,0.1,0.2,0.5,1,2], notes: 'Use 0.2 mg/kg IV loading for RSE CIVAD. Watch hypotension, respiratory depression, accumulation with repeated dosing, renal dysfunction, obesity/older age, and tachyphylaxis.' },
-      ketamine: { label: 'Ketamine', load: 1, unit: 'mg/kg/hr', range: '1.5-10 mg/kg/hr', quick: [1,1.5,2,3,5,7.5,10], notes: 'NMDA antagonist. Consider as adjunct/alternative in RSE. Watch hypertension/tachycardia, secretions, laryngospasm, myocardial depression in cardiac disease, cholestatic hepatotoxicity.' },
-      propofol: { label: 'Propofol', load: 2, unit: 'mcg/kg/min', range: '20-200 mcg/kg/min', quick: [20,50,65,100,150,200], notes: 'Calculator converts mcg/kg/min to mg/kg/hr. PRIS risk rises with high dose/prolonged use. Monitor TG, CK, lactate, K, renal/liver markers. Avoid/caution mitochondrial disease and ketogenic diet.' },
-      pentobarbital: { label: 'Pentobarbital', load: 5, unit: 'mg/kg/hr', range: '0.5-5 mg/kg/hr', quick: [0.5,1,2,5], notes: 'Profound hypotension, respiratory depression, ileus, infection risk, loss of neuro exam. ICU/airway/vasopressor planning required.' },
-      thiopental: { label: 'Thiopental', load: 3, unit: 'mg/kg/hr', range: '0.5-5 mg/kg/hr', quick: [0.5,1,2,5], notes: 'Barbiturate anesthetic. Respiratory/cardiac depression and hypotension. Use institutional protocol.' }
+    const STORAGE_KEY = 'se-calculator-admin-config-v1';
+    const round = (n, d = 1) => Number.isFinite(n) ? n.toFixed(d).replace(/\.0$/, '') : '-';
+    let deferredInstallPrompt = null;
+    let evidenceText = 'Glauser T, Shinnar S, Gloss D, et al. Evidence-based guideline: Treatment of convulsive status epilepticus in children and adults. Epilepsy Curr. 2016;16(1):48-61. Brophy GM, Bell R, Claassen J, et al. Guidelines for the evaluation and management of status epilepticus. Neurocrit Care. 2012;17(1):3-23. Kapur J, Elm J, Chamberlain JM, et al. Randomized trial of three anticonvulsant medications for status epilepticus. N Engl J Med. 2019;381(22):2103-2113. Chamberlain JM, Kapur J, Shinnar S, et al. Efficacy of levetiracetam, fosphenytoin, and valproate for established status epilepticus by age group. Lancet. 2020;395(10231):1217-1224. Woodward HJ, et al. Status epilepticus in older adults: A critical review. Epilepsia. 2025. Joshi S, Kapur J. Status epilepticus: Updates on mechanisms and treatments. Epilepsia Open. 2025.';
+    let sedatives = {
+      midazolam: { label: 'Midazolam', color: '#1f6fb7', load: 0.2, unit: 'mg/kg/hr', range: '0.05-2 mg/kg/hr', quick: [0.05,0.1,0.2,0.5,1,2], table: { min: 0.05, max: 2, step: 0.05 }, notes: 'Use 0.2 mg/kg IV loading for RSE CIVAD. Watch hypotension, respiratory depression, accumulation with repeated dosing, renal dysfunction, obesity/older age, and tachyphylaxis.' },
+      ketamine: { label: 'Ketamine', color: '#0f766e', load: 1, unit: 'mg/kg/hr', range: '1.5-10 mg/kg/hr', quick: [1,1.5,2,3,5,7.5,10], table: { min: 0.5, max: 10, step: 0.5 }, notes: 'NMDA antagonist. Consider as adjunct/alternative in RSE. Watch hypertension/tachycardia, secretions, laryngospasm, myocardial depression in cardiac disease, cholestatic hepatotoxicity.' },
+      propofol: { label: 'Propofol', color: '#a32020', load: 2, unit: 'mcg/kg/min', range: '20-200 mcg/kg/min', quick: [20,50,65,100,150,200], table: { min: 20, max: 200, step: 10 }, notes: 'Calculator converts mcg/kg/min to mg/kg/hr. PRIS risk rises with high dose/prolonged use. Monitor TG, CK, lactate, K, renal/liver markers. Avoid/caution mitochondrial disease and ketogenic diet.' },
+      pentobarbital: { label: 'Pentobarbital', color: '#8a6500', load: 5, unit: 'mg/kg/hr', range: '0.5-5 mg/kg/hr', quick: [0.5,1,2,5], table: { min: 0.5, max: 5, step: 0.1 }, notes: 'Profound hypotension, respiratory depression, ileus, infection risk, loss of neuro exam. ICU/airway/vasopressor planning required.' },
+      thiopental: { label: 'Thiopental', color: '#6b4ca5', load: 3, unit: 'mg/kg/hr', range: '0.5-5 mg/kg/hr', quick: [0.5,1,2,5], table: { min: 0.5, max: 5, step: 0.1 }, notes: 'Barbiturate anesthetic. Respiratory/cardiac depression and hypotension. Use institutional protocol.' }
     };
-    const asms = {
+    let selectedSedatives = ['midazolam', 'ketamine', 'propofol'];
+    let asms = {
       lev: { label:'Levetiracetam', doses:[40,60], max:4500, unit:'mg', minutes:10, note:'Low interaction and hemodynamic risk. Adjust maintenance in renal impairment; consider dialysis supplement.' },
       fpht: { label:'Fosphenytoin', doses:[20], max:1500, unit:'mg PE', minutes:10, note:'Dose in phenytoin equivalents. ECG/BP monitoring. Avoid/caution Dravet, sodium-channel toxin, conduction disease.' },
       pht: { label:'Phenytoin', doses:[20], max:1500, unit:'mg', minutes:30, note:'NS only. Avoid D5W and feeding tube. Purple glove/extravasation, hypotension, arrhythmia; TDM needed.' },
@@ -231,7 +303,7 @@
       pb: { label:'Phenobarbital', doses:[15,20], max:2000, unit:'mg', minutes:20, note:'Sedation, respiratory depression, hypotension. Older adults have reduced clearance.' },
       lac: { label:'Lacosamide', fixed:[200,400], max:400, unit:'mg', minutes:10, note:'Fixed loading option. Watch PR prolongation, AV block, bradyarrhythmia, cardiac disease/AV blockers.' }
     };
-    const warningItems = [
+    let warningItems = [
       ['renal','Renal impairment', 'LEV maintenance adjustment; midazolam active metabolite accumulation; consider dialysis supplement where relevant.'],
       ['hepatic','Severe hepatic disease', 'Avoid/caution valproate; sedative metabolism may be prolonged.'],
       ['platelet','Thrombocytopenia/coagulopathy', 'Avoid/caution valproate.'],
@@ -241,6 +313,98 @@
       ['dravet','Dravet or sodium-channel toxin', 'Avoid sodium-channel blockers such as PHT/fPHT and often lacosamide.'],
       ['carbapenem','Carbapenem use', 'Avoid valproate or expect major level reduction.']
     ];
+    const defaultConfig = JSON.parse(JSON.stringify({ sedatives, asms, warningItems, evidenceText }));
+    function loadConfig() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (!saved) return;
+        if (saved.sedatives) sedatives = saved.sedatives;
+        if (saved.asms) asms = saved.asms;
+        if (saved.warningItems) warningItems = saved.warningItems;
+        if (saved.evidenceText) evidenceText = saved.evidenceText;
+        if (saved.selectedSedatives) selectedSedatives = saved.selectedSedatives;
+      } catch (error) {
+        console.warn('Config load failed', error);
+      }
+    }
+    function currentConfig() {
+      return { sedatives, asms, warningItems, evidenceText, selectedSedatives, updatedAt: new Date().toISOString() };
+    }
+    function setAdminStatus(message, kind = 'note') {
+      const box = $('adminStatus');
+      if (!box) return;
+      box.className = `note ${kind}`;
+      box.textContent = message;
+    }
+    function renderAdmin() {
+      $('sedativeConfig').value = JSON.stringify(sedatives, null, 2);
+      $('asmConfig').value = JSON.stringify(asms, null, 2);
+      $('evidenceConfig').value = evidenceText;
+      $('evidenceText').textContent = evidenceText;
+    }
+    function saveAdminConfig() {
+      try {
+        sedatives = JSON.parse($('sedativeConfig').value);
+        asms = JSON.parse($('asmConfig').value);
+        evidenceText = $('evidenceConfig').value.trim() || defaultConfig.evidenceText;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentConfig()));
+        populate();
+        updateAsmDoseOptions();
+        calcSed();
+        calcWarnings();
+        calcScores();
+        renderAdmin();
+        setAdminStatus('Saved to this browser. Refresh-safe on this device.', 'note');
+      } catch (error) {
+        setAdminStatus(`JSON error: ${error.message}`, 'danger');
+      }
+    }
+    function resetAdminConfig() {
+      localStorage.removeItem(STORAGE_KEY);
+      sedatives = JSON.parse(JSON.stringify(defaultConfig.sedatives));
+      asms = JSON.parse(JSON.stringify(defaultConfig.asms));
+      warningItems = JSON.parse(JSON.stringify(defaultConfig.warningItems));
+      evidenceText = defaultConfig.evidenceText;
+      selectedSedatives = ['midazolam', 'ketamine', 'propofol'];
+      populate();
+      updateAsmDoseOptions();
+      calcSed();
+      calcWarnings();
+      calcScores();
+      renderAdmin();
+      setAdminStatus('Reset to bundled default values.', 'warn');
+    }
+    function exportAdminConfig() {
+      const blob = new Blob([JSON.stringify(currentConfig(), null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'se-calculator-config.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      setAdminStatus('Exported JSON configuration.', 'note');
+    }
+    function importAdminConfig() {
+      try {
+        const imported = JSON.parse($('importConfig').value);
+        if (!imported.sedatives || !imported.asms) throw new Error('sedatives and asms are required');
+        sedatives = imported.sedatives;
+        asms = imported.asms;
+        warningItems = imported.warningItems || warningItems;
+        evidenceText = imported.evidenceText || evidenceText;
+        selectedSedatives = imported.selectedSedatives || selectedSedatives;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentConfig()));
+        populate();
+        updateAsmDoseOptions();
+        calcSed();
+        calcWarnings();
+        calcScores();
+        renderAdmin();
+        setAdminStatus('Imported and saved to this browser.', 'note');
+      } catch (error) {
+        setAdminStatus(`Import failed: ${error.message}`, 'danger');
+      }
+    }
     function weights() {
       const wt = +$('wt').value || 0, ht = +$('ht').value || 0, sex = $('sex').value;
       const inches = ht / 2.54;
@@ -251,29 +415,54 @@
     }
     function selectedWeight(id) { const w = weights(); return w[$(id).value] || w.actual; }
     function populate() {
-      $('sedDrug').innerHTML = Object.entries(sedatives).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('');
+      selectedSedatives = selectedSedatives.filter(k => sedatives[k]);
+      if (!selectedSedatives.length) selectedSedatives = Object.keys(sedatives).slice(0, 1);
+      $('sedativeChecks').innerHTML = Object.entries(sedatives).map(([k,v]) => `<label class="drug-chip" style="border-left-color:${v.color || '#1f6fb7'}"><input type="checkbox" value="${k}" ${selectedSedatives.includes(k) ? 'checked' : ''}> ${v.label}<span class="small">${v.range}</span></label>`).join('');
       $('asmDrug').innerHTML = Object.entries(asms).map(([k,v]) => `<option value="${k}">${v.label}</option>`).join('');
       $('warningChecks').innerHTML = warningItems.map(([id,label]) => `<label class="check"><input id="warn_${id}" type="checkbox"> ${label}</label>`).join('');
     }
+    function selectedSedativeKeys() {
+      const checked = Array.from(document.querySelectorAll('#sedativeChecks input:checked')).map(el => el.value);
+      selectedSedatives = checked.length ? checked : selectedSedatives.filter(k => sedatives[k]);
+      return selectedSedatives.length ? selectedSedatives : Object.keys(sedatives).slice(0, 1);
+    }
+    function doseToMgKgHr(drug, dose) {
+      return drug.unit === 'mcg/kg/min' ? dose * 0.06 : dose;
+    }
+    function tableDoses(drug) {
+      const t = drug.table || {};
+      const min = Number.isFinite(+t.min) ? +t.min : Math.min(...drug.quick);
+      const max = Number.isFinite(+t.max) ? +t.max : Math.max(...drug.quick);
+      const step = Number.isFinite(+t.step) && +t.step > 0 ? +t.step : 0.1;
+      const doses = [];
+      for (let v = min, guard = 0; v <= max + step / 2 && guard < 1000; v += step, guard++) doses.push(+v.toFixed(4));
+      drug.quick.forEach(v => { if (!doses.some(x => Math.abs(x - v) < 0.0001)) doses.push(v); });
+      return doses.sort((a,b) => a-b);
+    }
     function calcSed() {
-      const drug = sedatives[$('sedDrug').value], dw = selectedWeight('dosingWeight'), conc = (+$('mixMg').value || 0) / (+$('mixMl').value || 1);
+      const keys = selectedSedativeKeys(), dw = selectedWeight('dosingWeight'), conc = (+$('mixMg').value || 0) / (+$('mixMl').value || 1);
       let dose = +$('rateDose').value || 0;
-      const doseMgKgHr = drug.unit === 'mcg/kg/min' ? dose * 0.06 : dose;
-      const mlhr = doseMgKgHr * dw / conc;
       $('dwOut').textContent = `${round(dw,1)} kg`;
       $('concOut').textContent = `${round(conc,2)} mg/mL`;
-      $('rateOut').textContent = `${round(mlhr,1)} mL/hr`;
-      $('loadOut').textContent = `${round(drug.load * dw,1)} mg`;
-      $('rangeOut').textContent = drug.range;
-      $('unitOut').textContent = drug.unit;
-      $('sedNotes').textContent = drug.notes;
-      $('sedQuick').innerHTML = drug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${x} ${drug.unit}</button>`).join('');
+      $('rateOut').textContent = `${keys.length} selected`;
+      $('loadOut').textContent = keys.map(k => `${sedatives[k].label}: ${round(sedatives[k].load * dw,1)} mg`).join(' · ');
+      $('rangeOut').textContent = keys.map(k => `${sedatives[k].label}: ${sedatives[k].range}`).join(' · ');
+      $('unitOut').textContent = 'see table';
+      const activeDrug = sedatives[keys[0]];
+      $('sedQuick').innerHTML = activeDrug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${activeDrug.label} ${x} ${activeDrug.unit}</button>`).join('');
       $('sedQuick').querySelectorAll('button').forEach(b => b.onclick = () => { $('rateDose').value = b.dataset.dose; calcSed(); });
-      const rows = drug.quick.map(x => {
-        const mgkg = drug.unit === 'mcg/kg/min' ? x * 0.06 : x;
-        return `<tr><td>${x} ${drug.unit}</td><td>${round(mgkg,2)} mg/kg/hr</td><td>${round(mgkg * dw / conc,1)} mL/hr</td></tr>`;
+      const rows = keys.flatMap(k => {
+        const drug = sedatives[k];
+        return tableDoses(drug).map(x => {
+          const mgkg = doseToMgKgHr(drug, x);
+          return `<tr><td style="border-left:6px solid ${drug.color || '#1f6fb7'}"><b>${drug.label}</b></td><td>${x} ${drug.unit}</td><td>${round(mgkg,2)} mg/kg/hr</td><td>${round(mgkg * dw / conc,1)} mL/hr</td></tr>`;
+        });
       }).join('');
-      $('rateTable').innerHTML = `<table><thead><tr><th>Dose</th><th>Converted</th><th>Rate</th></tr></thead><tbody>${rows}</tbody></table>`;
+      $('rateTable').innerHTML = `<div class="table-wrap"><table><thead><tr><th>Drug</th><th>Dose</th><th>Converted</th><th>Infusion rate</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      $('sedNotes').innerHTML = keys.map(k => {
+        const drug = sedatives[k];
+        return `<div class="drug-note" style="border-left-color:${drug.color || '#1f6fb7'}"><b>${drug.label}</b><br>${drug.notes}</div>`;
+      }).join('');
     }
     function updateAsmDoseOptions() {
       const d = asms[$('asmDrug').value];
@@ -315,19 +504,38 @@
       $('scoreNotes').innerHTML = `CAVE estimated late seizure risk: <b>${caveRisk}</b>. SeLECT requires original risk table/nomogram for exact 1-year/5-year probability. STESS is for escalation/monitoring support, not treatment limitation.`;
     }
     function bind() {
+      window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        $('installBtn').textContent = 'Install app';
+      });
       document.querySelectorAll('.tab').forEach(btn => btn.onclick = () => {
         document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
         btn.classList.add('active'); $(btn.dataset.tab).classList.remove('hidden');
       });
-      ['wt','ht','sex','dosingWeight','mixMg','mixMl','rateDose','sedDrug'].forEach(id => $(id).addEventListener('input', calcSed));
+      $('installBtn').addEventListener('click', async () => {
+        if (deferredInstallPrompt) {
+          deferredInstallPrompt.prompt();
+          await deferredInstallPrompt.userChoice.catch(() => null);
+          deferredInstallPrompt = null;
+        } else {
+          alert('Android Chrome: 메뉴에서 "홈 화면에 추가"를 선택하세요. iPhone Safari: 공유 버튼을 누른 뒤 "홈 화면에 추가"를 선택하세요.');
+        }
+      });
+      $('saveConfig').addEventListener('click', saveAdminConfig);
+      $('resetConfig').addEventListener('click', resetAdminConfig);
+      $('exportConfig').addEventListener('click', exportAdminConfig);
+      $('applyImport').addEventListener('click', importAdminConfig);
+      ['wt','ht','sex','dosingWeight','mixMg','mixMl','rateDose'].forEach(id => $(id).addEventListener('input', calcSed));
+      $('sedativeChecks').addEventListener('change', calcSed);
       $('asmDrug').addEventListener('change', updateAsmDoseOptions);
       ['asmDose','asmMinutes','asmWeight','wt','ht','sex'].forEach(id => $(id).addEventListener('input', calcAsm));
-      warningItems.forEach(([id]) => $(`warn_${id}`).addEventListener('change', calcWarnings));
+      $('warningChecks').addEventListener('change', calcWarnings);
       document.querySelectorAll('#scores input,#scores select').forEach(el => el.addEventListener('input', calcScores));
       if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js');
     }
-    populate(); updateAsmDoseOptions(); bind(); calcSed(); calcAsm(); calcWarnings(); calcScores();
+    loadConfig(); populate(); updateAsmDoseOptions(); bind(); renderAdmin(); calcSed(); calcAsm(); calcWarnings(); calcScores();
   </script>
 </body>
 </html>
