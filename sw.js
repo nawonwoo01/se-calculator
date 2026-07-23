@@ -1,9 +1,11 @@
-const CACHE_NAME = "se-calculator-2026-07-v6";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg", "./patient-mix-patch.js"];
-const PATCH_TAG = '<script src="patient-mix-patch.js"></script>';
+const CACHE_NAME = "se-calculator-2026-07-v7";
+const HTML_CACHE_URLS = ["./", "./index.html"];
+const STATIC_ASSETS = ["./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll([...HTML_CACHE_URLS, ...STATIC_ASSETS]))
+  );
   self.skipWaiting();
 });
 
@@ -16,24 +18,37 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-async function patchedHtml(request) {
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
+async function networkFirstHtml(request) {
   const cache = await caches.open(CACHE_NAME);
   try {
-    const response = await fetch(request);
-    const text = await response.clone().text();
-    const patched = text.includes('patient-mix-patch.js') ? text : text.replace('</body>', `${PATCH_TAG}</body>`);
-    const out = new Response(patched, { headers: { 'content-type': 'text/html; charset=utf-8' } });
-    cache.put('./', out.clone());
-    return out;
+    const fresh = await fetch(new Request(request, { cache: "reload" }));
+    if (fresh.ok) {
+      cache.put("./", fresh.clone());
+      cache.put("./index.html", fresh.clone());
+    }
+    return fresh;
   } catch (error) {
-    return (await cache.match('./')) || Response.error();
+    return (await cache.match("./index.html")) || (await cache.match("./")) || Response.error();
   }
+}
+
+async function cacheFirstAsset(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+  const fresh = await fetch(request);
+  if (fresh.ok) cache.put(request, fresh.clone());
+  return fresh;
 }
 
 self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
-    event.respondWith(patchedHtml(event.request));
+    event.respondWith(networkFirstHtml(event.request));
     return;
   }
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+  event.respondWith(cacheFirstAsset(event.request));
 });
