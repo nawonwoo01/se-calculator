@@ -1,10 +1,12 @@
-const CACHE_NAME = "se-calculator-2026-07-v7";
+const CACHE_NAME = "se-calculator-2026-07-v8";
 const HTML_CACHE_URLS = ["./", "./index.html"];
 const STATIC_ASSETS = ["./styles.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll([...HTML_CACHE_URLS, ...STATIC_ASSETS]))
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll([...HTML_CACHE_URLS, ...STATIC_ASSETS].map((url) => new Request(url, { cache: "reload" })))
+    )
   );
   self.skipWaiting();
 });
@@ -36,13 +38,15 @@ async function networkFirstHtml(request) {
   }
 }
 
-async function cacheFirstAsset(request) {
+async function networkFirstAsset(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-  const fresh = await fetch(request);
-  if (fresh.ok) cache.put(request, fresh.clone());
-  return fresh;
+  try {
+    const fresh = await fetch(new Request(request, { cache: "reload" }));
+    if (fresh.ok) cache.put(request, fresh.clone());
+    return fresh;
+  } catch (error) {
+    return (await cache.match(request)) || Response.error();
+  }
 }
 
 self.addEventListener("fetch", (event) => {
@@ -50,5 +54,5 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(networkFirstHtml(event.request));
     return;
   }
-  event.respondWith(cacheFirstAsset(event.request));
+  event.respondWith(networkFirstAsset(event.request));
 });
