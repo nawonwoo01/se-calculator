@@ -23,5 +23,8 @@
   "storeScreenshotsReady": false,
   "currentStoreRequirementsReviewed": false,
   "submittedToGooglePlay": false,
-  "submittedToAppStore": false
+  "submittedToAppStore": false,
+  "androidDevelopmentBuildPassed": true,
+  "iosSimulatorBuildPassed": true,
+  "codeTestsPassed": true
 }
