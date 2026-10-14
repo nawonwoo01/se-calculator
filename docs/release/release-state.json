@@ -26,5 +26,10 @@
   "submittedToAppStore": false,
   "androidDevelopmentBuildPassed": true,
   "iosSimulatorBuildPassed": true,
-  "codeTestsPassed": true
+  "codeTestsPassed": true,
+  "iosSimulatorLaunchPassed": true,
+  "iosNativeCalculationChecksPassed": true,
+  "iosNativeScreenshotInspected": true,
+  "verifiedCodeCommit": "d4db8ae848e34f4b54eae572143556170c3743cc",
+  "ciRunUrl": "https://github.com/nawonwoo01/se-calculator/actions/runs/38509745589"
 }
