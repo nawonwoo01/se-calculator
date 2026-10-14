@@ -1,0 +1,26 @@
+{
+  "status": "draft",
+  "pricing": "free",
+  "category": "Medical",
+  "defaultLocale": "ko-KR",
+  "ko-KR": {
+    "name": "SE Calculator",
+    "subtitle": "성인 SE 용량·주입속도 계산 보조",
+    "shortDescription": "의료전문가용 성인 ASM loading·진정제 주입속도와 SeLECT·CAVE·STESS 계산 보조",
+    "description": "SE Calculator는 의료전문가를 위한 성인 뇌전증지속증 계산 보조 도구입니다. 체중과 약물량·최종 혼합 부피를 입력하여 ASM loading dose와 sedative infusion rate를 확인하고, SeLECT·CAVE·STESS 점수를 계산할 수 있습니다.\n\n주요 기능\n• ASM loading dose와 상한 용량 표시\n• 진정제별 혼합 농도 및 mL/hr 표\n• Propofol mcg/kg/min → mg/kg/hr 환산\n• Actual·IBW·LBW·AdjBW 체중 계산\n• 환자별 주의사항 확인과 참고문헌·계산식\n• 인터넷 없이 기기 내 계산\n\n무료이며 광고·인앱결제·가입이 없습니다. 앱의 임시 케이스는 실행 중에만 유지됩니다. 환자 식별정보를 입력하지 마세요.\n\n이 앱은 진단·처방을 대신하지 않습니다. 소아 용량 계산에 사용하지 마세요. 실제 투여 전 기관 프로토콜, 실제 약품 농도, 장기 기능, 임신 가능성 및 ECG/BP/airway/EEG monitoring 조건을 독립적으로 확인해야 합니다.",
+    "keywords": "status epilepticus,ASM,infusion,STESS,SeLECT,CAVE,뇌전증"
+  },
+  "en-US": {
+    "name": "SE Calculator",
+    "subtitle": "Adult SE dosing calculations",
+    "shortDescription": "Adult ASM loading, sedative infusion and seizure score tools for clinicians",
+    "description": "SE Calculator supports adult calculation checks for healthcare professionals caring for patients with status epilepticus. Calculate ASM loading doses with dose caps, sedative infusion rates from drug-specific mixtures, dosing-weight formulas, and SeLECT, CAVE and STESS scores.\n\nAll calculations work offline. Free, with no ads, in-app purchases or account registration. Temporary cases remain in memory only during app execution. Do not enter patient identifiers.\n\nThis tool does not replace clinical judgment or prescribing. Do not use for pediatric dosing. Independently verify institutional protocols, actual product concentrations, organ function, pregnancy status, and ECG/BP/airway/EEG monitoring conditions before administration.",
+    "keywords": "status epilepticus,ASM,infusion,STESS,SeLECT,CAVE"
+  },
+  "supportEmail": null,
+  "supportUrl": null,
+  "privacyPolicyUrl": null,
+  "publisher": null,
+  "ageRating": "Complete current store questionnaires; do not infer rating from professional audience",
+  "releaseCountries": "Confirm with publisher; proposed initial country: Korea"
+}

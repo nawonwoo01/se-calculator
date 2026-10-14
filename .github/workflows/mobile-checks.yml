@@ -1,0 +1,98 @@
+name: Mobile release preparation
+on:
+  pull_request:
+    paths:
+      - '*.js'
+      - '*.html'
+      - '*.css'
+      - '*.webmanifest'
+      - 'package*.json'
+      - 'capacitor.config.json'
+      - 'playwright.config.cjs'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'icons/**'
+      - 'assets/**'
+      - 'android/**'
+      - 'ios/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm audit --omit=dev
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: CHROMIUM_PATH=$(node -p "require('@playwright/test').chromium.executablePath()") npm run test:ui
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '16111833'
+          packages: platform-tools
+      - run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0' 'build-tools;36.0.0'
+      - run: npm ci
+      - run: npm run mobile:sync
+      - run: ./gradlew --no-daemon assembleDebug bundleRelease
+        working-directory: android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-development-builds-not-for-store-upload
+          path: |
+            android/app/build/outputs/apk/debug/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run mobile:sync
+      - run: bash scripts/ios-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-simulator-development-preview
+          path: artifacts/ios-*
+  ios-release-archive:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run mobile:sync
+      - run: bash scripts/ios-release-archive.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-device-release-archive-not-for-store-upload
+          path: |
+            artifacts/ios-unsigned-release-not-for-upload.tar.gz
+            artifacts/ios-release-archive-verification.json

@@ -33,9 +33,11 @@ python -m http.server 8787
 
 ## Admin 탭 안내
 
+Android/iOS 무료 앱 출시 준비는 [docs/release/README.md](docs/release/README.md)를 참고하세요. 현재 개발 버전이며 스토어에 제출되지 않았습니다. `npm ci`, `npm test`, `npm run mobile:sync`로 앱 프로젝트를 재현할 수 있습니다. 네이티브 앱은 Admin 편집이 비활성화되고 케이스가 실행 중 메모리에만 유지됩니다.
+
 정적 HTML 버전의 Admin 탭은 서버 데이터베이스를 바꾸지 않습니다. 저장값은 현재 브라우저의 `localStorage`에만 저장됩니다.
 
-전체 사용자에게 같은 값을 배포하려면 Admin 탭에서 `Export JSON`으로 내보낸 뒤, 그 JSON을 기준으로 `index.html`의 기본 설정을 업데이트해야 합니다.
+전체 사용자에게 같은 값을 배포하려면 Admin 탭에서 `Export JSON`으로 내보낸 뒤, 임상적으로 검토한 값을 `app.js`의 기본 설정에 반영하고 앱을 다시 빌드해야 합니다.
 
 ## 주요 참고문헌
 

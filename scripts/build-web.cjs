@@ -1,0 +1,20 @@
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const sharp = require('sharp');
+(async () => {
+  const root = path.resolve(__dirname, '..');
+  const out = path.join(root, 'www');
+  await fs.rm(out, { recursive: true, force: true });
+  await fs.mkdir(out, { recursive: true });
+  await fs.mkdir(path.join(root, 'icons'), { recursive: true });
+  await fs.mkdir(path.join(root, 'assets'), { recursive: true });
+  const svg = await fs.readFile(path.join(root, 'icon.svg'));
+  for (const size of [192, 512]) await sharp(svg).resize(size, size).flatten({ background: '#12385f' }).png().toFile(path.join(root, `icons/icon-${size}.png`));
+  await sharp(svg).resize(1024, 1024).flatten({ background: '#12385f' }).png().toFile(path.join(root, 'assets/icon-only.png'));
+  await sharp({ create: { width: 2732, height: 2732, channels: 3, background: '#12385f' } }).composite([{ input: await sharp(svg).resize(640, 640).png().toBuffer(), gravity: 'centre' }]).png().toFile(path.join(root, 'assets/splash.png'));
+  for (const file of ['index.html', 'styles.css', 'app.js', 'calculator-core.js', 'manifest.webmanifest', 'icon.svg', 'privacy.html', 'support.html']) await fs.copyFile(path.join(root, file), path.join(out, file));
+  await fs.cp(path.join(root, 'icons'), path.join(out, 'icons'), { recursive: true });
+  const pkg = require('../package.json');
+  await fs.writeFile(path.join(out, 'release-config.js'), `window.SE_RELEASE = ${JSON.stringify({ version: pkg.version, native: true, clinicalStatus: '검토 전 개발 버전' })};\n`);
+  console.log(`Bundled offline assets in www (v${pkg.version}); no remote server configured.`);
+})().catch(error => { console.error(error); process.exitCode = 1; });
