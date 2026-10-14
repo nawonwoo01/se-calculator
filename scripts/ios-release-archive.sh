@@ -2,7 +2,7 @@
 set -euo pipefail
 # Compilation and bundle inspection only. No credentials, export, upload or signing.
 mkdir -p artifacts
-SE_XCODE_VERSION=$(xcodebuild -version | head -n 1 | awk '{print $2}')
+SE_XCODE_VERSION=$(xcodebuild -version | awk '/^Xcode / {print $2}')
 SE_IOS_SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
 if [ "${SE_XCODE_VERSION%%.*}" -lt 26 ] || [ "${SE_IOS_SDK_VERSION%%.*}" -lt 26 ]; then
   echo 'Release compilation requires Xcode 26+ and iOS SDK 26+.' >&2
