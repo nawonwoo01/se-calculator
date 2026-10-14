@@ -78,3 +78,21 @@ jobs:
         with:
           name: ios-simulator-development-preview
           path: artifacts/ios-*
+  ios-release-archive:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run mobile:sync
+      - run: bash scripts/ios-release-archive.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned-device-release-archive-not-for-store-upload
+          path: |
+            artifacts/ios-unsigned-release-not-for-upload.tar.gz
+            artifacts/ios-release-archive-verification.json

@@ -3,6 +3,12 @@
 검증일: 2026-10-14. 검증 코드 commit: `d4db8ae848e34f4b54eae572143556170c3743cc`.
 [최종 CI](https://github.com/nawonwoo01/se-calculator/actions/runs/38509745589)에서 web, Android, iOS가 모두 통과했다. 임상 검토·실기기 테스트·스토어 심사는 미완료다.
 
+## 이어서 준비 중인 검증
+
+2026-10-14 추가 작업: 공식 공개 정책 조회를 `policy-review.md`에 기록했고, 의료 앱 조직 계정·연락처/URL·무료 설정·임상 검토 날짜와 플랫폼별 제출 조건을 점검하도록 보완했다. 로컬 Node 테스트는 산술 5건과 출시 조건 4건, 총 9건이 통과했다. 실제 기록의 `release:check`는 미확인 선행 조건 때문에 계속 실패하며 이는 CI 코드 실패와 별개다.
+
+기기용 unsigned iOS Release Archive CI를 추가했다. CI 성공과 실제 산출물을 확인하기 전에는 생성 완료로 기록하지 않는다. 성공하더라도 `iosArchiveValidated`는 서명된 배포 Archive의 Xcode Validate App을 확인할 때까지 false를 유지한다.
+
 ## 확인된 결과
 
 - Node 산술 테스트 5건 통과: 알려진 용량/농도 예제, dose cap, 성인 체중식, 오류 입력, STESS 0–6 경계.
@@ -27,7 +33,7 @@
 | se-calculator-0.1.0-debug.apk | 4,455,042 bytes | 56d0b4a13c2d935982c05f9a14507175d459f30cd9fbdd1a9178cb63c3dc51e3 |
 | se-calculator-0.1.0-unsigned.aab | 3,129,414 bytes | 836f9b7ae73a792f3d713c3df996c5b9d2db4c480e323906d0695d5b3ad7adb0 |
 
-APK는 개발 확인용이며 임상 투여/스토어 배포용이 아니다. AAB는 upload key 서명 전에는 Google Play에 업로드할 수 없다. iOS 배포 Archive/IPA는 아직 생성하지 않았다. Simulator 실행 성공은 TestFlight 업로드나 실제 iPhone/iPad 테스트를 의미하지 않는다. 개발용 캡처는 출시 명의·임상 검토·최종 문구 확정 후 스토어용으로 다시 준비한다.
+APK는 개발 확인용이며 임상 투여/스토어 배포용이 아니다. AAB는 upload key 서명 전에는 Google Play에 업로드할 수 없다. 서명된 iOS 배포 Archive/IPA는 아직 생성하지 않았다. Simulator 실행 성공은 TestFlight 업로드나 실제 iPhone/iPad 테스트를 의미하지 않는다. 개발용 캡처는 출시 명의·임상 검토·최종 문구 확정 후 스토어용으로 다시 준비한다.
 
 ## 제출 및 알림 상태
 

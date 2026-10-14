@@ -15,4 +15,5 @@ android/**/build/
 ios/**/build/
 ios/**/DerivedData/
 ios-build/
+ios-release-build/
 .DS_Store

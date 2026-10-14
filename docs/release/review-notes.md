@@ -14,4 +14,6 @@ Calculation checks:
 
 Required submission attachments: publisher authority and evidence satisfying Apple guideline 1.4.2; final clinical review; medical regulatory assessment if applicable; public privacy/support URLs; final screenshots; completed Google health declaration and data/privacy questionnaires.
 
-Current development captures are previews of the local browser bundle. They must not be presented as native device captures. Current build is marked unreviewed and has not been submitted.
+`phone-ios-simulator-development.png` is an actual native iOS Simulator development capture. Files named `browser-preview` are browser previews, not native device captures. None is a final store screenshot. Current build is marked unreviewed and has not been submitted. The unsigned device Release Archive check does not export an IPA or validate a distribution signature.
+
+The draft Google Health apps declaration category is Medical → Clinical Decision Support, matching the drug dosage calculator and risk score functionality. Final regulatory classification is pending. Do not assert that this is a non-medical-device app before the intended-use assessment. Google requires an organization account for medical apps; publisher authority and Apple guideline 1.4.2 evidence are still pending. See `policy-review.md` for the official sources checked on 2026-10-14.
