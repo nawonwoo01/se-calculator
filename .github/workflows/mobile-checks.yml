@@ -63,6 +63,7 @@ jobs:
             android/app/build/outputs/bundle/release/*.aab
   ios:
     runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -73,6 +74,7 @@ jobs:
       - run: npm run mobile:sync
       - run: bash scripts/ios-smoke.sh
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-simulator-development-preview
-          path: artifacts/ios-simulator-launch.png
+          path: artifacts/ios-*

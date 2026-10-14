@@ -32,3 +32,9 @@ Play Console/App Store Connect 앱 등록·업로드·심사 요청은 수행하
 ## 진행 알림
 
 “SE 앱 출시 진행 알림”이 GitHub PR/출시 기록을 매시간 확인한다. 의미 있는 변화나 새 사용자 조치가 있을 때만 알린다. 연결되지 않은 스토어의 심사 상태를 직접 감시하지 않는다.
+
+## 후속 CI 검증
+
+SDK 설정 수정 후 [두 번째 CI](https://github.com/nawonwoo01/se-calculator/actions/runs/38505192133)에서 web, Android APK/AAB, iOS Simulator compile이 모두 통과했다. 추가한 Simulator 실행/네이티브 화면 캡처 검증은 다음 CI에서 확인한다.
+
+세 번째 CI에서 iOS 프로세스 실행은 성공했으나 5초 후 캡처가 흰 화면이었다. 이 결과를 UI 검증 통과로 판단하지 않는다. 고정 지연을 제거하고 DEBUG/명시적 CI 플래그에서 실제 페이지의 10 mL/hr·3600 mg 계산 결과 확인 신호를 받은 뒤 캡처하도록 보완한다.
