@@ -38,3 +38,5 @@ Play Console/App Store Connect 앱 등록·업로드·심사 요청은 수행하
 SDK 설정 수정 후 [두 번째 CI](https://github.com/nawonwoo01/se-calculator/actions/runs/38505192133)에서 web, Android APK/AAB, iOS Simulator compile이 모두 통과했다. 추가한 Simulator 실행/네이티브 화면 캡처 검증은 다음 CI에서 확인한다.
 
 세 번째 CI에서 iOS 프로세스 실행은 성공했으나 5초 후 캡처가 흰 화면이었다. 이 결과를 UI 검증 통과로 판단하지 않는다. 고정 지연을 제거하고 DEBUG/명시적 CI 플래그에서 실제 페이지의 10 mL/hr·3600 mg 계산 결과 확인 신호를 받은 뒤 캡처하도록 보완한다.
+
+네 번째 CI에서 Android/web은 통과했고 iOS compile도 성공했으나 readiness 신호 대기가 실패했다. 수집된 로그에는 프로세스 실행과 초기 WKWebView cookie 초기화만 있었고 Swift stdout 메시지가 없어, CI 콘솔을 PTY로 연결하고 readiness 메시지를 즉시 flush하도록 보완한다. iOS 화면 검증은 아직 미완료다.

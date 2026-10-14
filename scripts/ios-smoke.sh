@@ -7,7 +7,7 @@ xcrun simctl bootstatus "$SE_SIMULATOR_ID" -b
 xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination "id=$SE_SIMULATOR_ID" -derivedDataPath ios-build CODE_SIGNING_ALLOWED=NO build
 xcrun simctl install "$SE_SIMULATOR_ID" ios-build/Build/Products/Debug-iphonesimulator/App.app
 trap 'xcrun simctl shutdown "$SE_SIMULATOR_ID" 2>/dev/null || true' EXIT
-xcrun simctl launch --terminate-running-process --console "$SE_SIMULATOR_ID" org.secalculator.app --se-ui-smoke > artifacts/ios-console.log 2>&1 &
+xcrun simctl launch --terminate-running-process --console-pty "$SE_SIMULATOR_ID" org.secalculator.app --se-ui-smoke > artifacts/ios-console.log 2>&1 &
 SE_SIM_LAUNCH_PID=$!
 node scripts/wait-ios-ready.cjs
 xcrun simctl io "$SE_SIMULATOR_ID" screenshot artifacts/ios-simulator-launch.png
