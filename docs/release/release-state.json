@@ -21,7 +21,7 @@
   "appleSigningReady": false,
   "physicalDeviceTestsPassed": false,
   "iosArchiveValidated": false,
-  "iosUnsignedDeviceArchiveBuilt": false,
+  "iosUnsignedDeviceArchiveBuilt": true,
   "storeScreenshotsReady": false,
   "currentStoreRequirementsReviewed": false,
   "publicStorePoliciesReviewedOn": "2026-10-14",
@@ -33,6 +33,7 @@
   "iosSimulatorLaunchPassed": true,
   "iosNativeCalculationChecksPassed": true,
   "iosNativeScreenshotInspected": true,
-  "verifiedCodeCommit": "d4db8ae848e34f4b54eae572143556170c3743cc",
-  "ciRunUrl": "https://github.com/nawonwoo01/se-calculator/actions/runs/38509745589"
+  "verifiedCodeCommit": "ee3ae20f6195e32f582918cdf590752850021b26",
+  "ciRunUrl": "https://github.com/nawonwoo01/se-calculator/actions/runs/38542858607",
+  "iosUnsignedDeviceArchiveArtifactUrl": "https://github.com/nawonwoo01/se-calculator/actions/runs/38542858607/artifacts/11882409645"
 }
