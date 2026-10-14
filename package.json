@@ -1,0 +1,29 @@
+{
+  "name": "se-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Offline SE calculator and Android/iOS release preparation",
+  "scripts": {
+    "build": "node scripts/build-web.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "test:ui": "playwright test",
+    "mobile:sync": "npm run build && cap sync",
+    "android:debug": "npm run mobile:sync && cd android && ./gradlew assembleDebug",
+    "release:check": "node scripts/release-check.cjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3",
+    "@playwright/test": "1.64.0",
+    "sharp": "0.35.5"
+  },
+  "overrides": {
+    "xcode": {
+      "uuid": "11.1.1"
+    }
+  }
+}
