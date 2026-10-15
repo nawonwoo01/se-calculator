@@ -49,7 +49,7 @@ npm test
 npm run test:ui
 ```
 
-Node 산술 검사와 Playwright 모바일·오프라인·기존 케이스·구 버전 PWA 갱신 검사를 실행합니다. 운영 사이트는 `main`의 정적 파일을 GitHub Pages로 배포합니다. 배포 완료 후 `Verify deployed calculator`가 공개 URL 파일의 SHA-256 일치와 브라우저 계산·오프라인 동작을 검사합니다. CI 성공은 임상 승인이 아닙니다.
+Node 산술 검사와 Playwright 모바일·오프라인·기존 케이스·구 버전 PWA 갱신 검사를 실행합니다. 운영 사이트는 `main`의 정적 파일을 GitHub Pages로 배포합니다. main 갱신 시 `Verify deployed calculator`가 공개 URL에 새 파일이 반영될 때까지 기다린 뒤 SHA-256 일치와 브라우저 계산·오프라인 동작을 검사합니다. CI 성공은 임상 승인이 아닙니다.
 
 ## 주요 참고문헌
 
