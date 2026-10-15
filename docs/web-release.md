@@ -19,7 +19,7 @@
 
 로컬에서 산술 5건, 모바일 UI/PWA 9건을 통과했고 npm audit 보고는 0건이다. 구 버전 캐시에서 새 버전 안내가 나타나도 현재 입력을 자동으로 지우지 않으며, 사용자가 적용한 뒤 새 캐시로 바뀌는 것을 확인했다. 별칭과 체중 등 기존 브라우저 케이스도 유지하는 것을 시험했다. 모바일 화면을 로컬 브라우저에서 직접 확인했다.
 
-`Web calculator checks`는 PR과 main에서 같은 검사를 수행한다. `Verify deployed calculator`는 GitHub Pages 배포 성공 뒤 공개 URL의 HTML/JS/CSS/service worker 파일 해시, 버전 표시, 계산 예제, STESS, 잘못된 입력 처리와 오프라인 페이지 이동을 확인한다. 실제 배포 완료 여부는 이 문서의 작성만으로 추정하지 말고 해당 실행 결과에서 확인한다.
+`Web calculator checks`는 PR과 main에서 같은 검사를 수행한다. `Verify deployed calculator`는 main 갱신 시 공개 URL에 현재 파일이 반영될 때까지 기다린 뒤 HTML/JS/CSS/service worker 파일 해시, 버전 표시, 계산 예제, STESS, 잘못된 입력 처리와 오프라인 페이지 이동을 확인한다. 실제 배포 완료 여부는 이 문서의 작성만으로 추정하지 말고 해당 실행 결과에서 확인한다.
 
 ## 사용자가 검토하는 순서
 
