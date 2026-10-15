@@ -2,6 +2,10 @@
 
 뇌전증지속증(status epilepticus)에서 항경련제 loading dose와 refractory status epilepticus sedative infusion rate를 빠르게 확인하기 위한 정적 HTML/PWA 계산기입니다.
 
+현재 웹 버전: **0.1.1 (2026-10-15)**. 사이트: https://nawonwoo01.github.io/se-calculator/
+
+웹 공통 계산·입력·STESS·PE 단위·약제별 혼합 농도를 보완했습니다. `release/mobile-app`의 미출시 네이티브 앱 구성은 별도 PR에 있습니다. 이 웹 업데이트는 스토어 제출이나 임상 승인을 뜻하지 않습니다. 변경 내용과 확인 방법은 `docs/web-release.md`, 임상 검토 미완료 항목은 `docs/clinical-review.md`를 확인하세요.
+
 ## 포함 기능
 
 - 환자 체중/키/성별 기반 actual/IBW/LBW/AdjBW 계산
@@ -35,7 +39,17 @@ python -m http.server 8787
 
 정적 HTML 버전의 Admin 탭은 서버 데이터베이스를 바꾸지 않습니다. 저장값은 현재 브라우저의 `localStorage`에만 저장됩니다.
 
-전체 사용자에게 같은 값을 배포하려면 Admin 탭에서 `Export JSON`으로 내보낸 뒤, 그 JSON을 기준으로 `index.html`의 기본 설정을 업데이트해야 합니다.
+전체 사용자에게 같은 값을 배포하려면 Admin 탭에서 `Export JSON`으로 내보낸 뒤, 원문·기관 프로토콜과 대조하여 `app.js`의 기본 설정을 검토해야 합니다. 로컬 Admin 편집은 임상 검토나 전체 사용자 대상 배포를 자동으로 수행하지 않습니다.
+
+## 개발 검증과 배포
+
+```bash
+npm ci
+npm test
+npm run test:ui
+```
+
+Node 산술 검사와 Playwright 모바일·오프라인·기존 케이스·구 버전 PWA 갱신 검사를 실행합니다. 운영 사이트는 `main`의 정적 파일을 GitHub Pages로 배포합니다. 배포 완료 후 `Verify deployed calculator`가 공개 URL 파일의 SHA-256 일치와 브라우저 계산·오프라인 동작을 검사합니다. CI 성공은 임상 승인이 아닙니다.
 
 ## 주요 참고문헌
 

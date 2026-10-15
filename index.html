@@ -2,9 +2,11 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#12385f">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <title>SE ASM/Sedative Calculator</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,10 +14,12 @@
   <header>
     <div class="title">
       <h1>SE ASM/Sedative Calculator</h1>
-      <span class="meta">2026-07 reference · offline/PWA ready</span>
+      <span class="meta" id="appVersion">v0.1.1 · 임상 검토 전 · 웹 업데이트 2026-10-15</span>
     </div>
   </header>
   <main>
+    <div class="note warn launch-notice">의료전문가용 성인 계산 보조 도구입니다. 검토 전 개발 버전이며, 소아 용량 계산에 사용하지 마세요. 실제 투여 전 용량·단위·농도와 기관 프로토콜을 독립적으로 확인하세요.</div>
+    <div id="updateNotice" class="note hidden">새 버전이 준비되었습니다. 적용하면 현재 입력이 초기화됩니다. <button id="applyUpdate" class="button" type="button">새 버전 적용</button></div>
     <div class="tabs" role="tablist">
       <button class="tab active" data-tab="sedation">Sedative</button>
       <button class="tab" data-tab="asm">ASM loading</button>
@@ -23,6 +27,7 @@
       <button class="tab" data-tab="scores">Scores</button>
       <button class="tab" data-tab="refs">Evidence</button>
       <button class="tab" data-tab="admin">Admin</button>
+      <button class="tab" data-tab="about">앱 정보</button>
     </div>
 
     <div class="install-box note">
@@ -38,22 +43,26 @@
         <aside class="panel">
           <h2>Patient and mixture</h2>
           <div class="field">
-            <label>Saved patient profile</label>
+            <label>Saved case</label>
             <select id="patientSelect"></select>
           </div>
           <div class="profile-actions">
-            <div class="field"><label>Patient ID / initials</label><input id="patientName" type="text" placeholder="예: KGD, ER-01, 병록번호 등"></div>
-            <button id="savePatient" class="button" type="button">Save patient</button>
+            <div class="field"><label>익명 케이스 별칭</label><input id="patientName" type="text" maxlength="80" autocomplete="off" placeholder="예: Case 1 · 환자 식별정보 입력 금지"></div>
+            <button id="savePatient" class="button" type="button">Save case</button>
             <button id="deletePatient" class="button secondary" type="button">Delete</button>
           </div>
+          <p class="small" id="profileStorageNote">저장 버튼을 누른 케이스만 이 브라우저에 저장됩니다. 환자 이름·이니셜·병록번호를 입력하지 마세요.</p>
+          <div class="pillbar"><button id="newCase" class="button secondary" type="button">New case</button><button id="clearCases" class="button secondary" type="button">모든 케이스 삭제</button></div>
+          <p id="caseStatus" class="small" role="status" aria-live="polite"></p>
           <div class="row">
-            <div class="field"><label>Weight, kg</label><input id="wt" type="number" value="60" min="1" step="0.1"></div>
-            <div class="field"><label>Height, cm</label><input id="ht" type="number" value="170" min="40" step="0.1"></div>
+            <div class="field"><label>Weight, kg</label><input id="wt" type="number" min="0.1" max="500" step="0.1" placeholder="체중 입력"></div>
+            <div class="field"><label>Height, cm</label><input id="ht" type="number" min="100" max="250" step="0.1" placeholder="키 입력"></div>
           </div>
           <div class="row">
             <div class="field"><label>Sex</label><select id="sex"><option value="male">Male</option><option value="female">Female</option></select></div>
             <div class="field"><label>Dosing weight</label><select id="dosingWeight"><option value="actual">Actual</option><option value="ibw">IBW</option><option value="lbw">LBW</option><option value="adj">AdjBW</option></select></div>
           </div>
+          <h3 id="primaryMixtureLabel">혼합액</h3>
           <div class="row3">
             <div class="field"><label>1x drug amount, mg</label><input id="baseMixMg" type="number" value="600" min="1"></div>
             <div class="field"><label>Mix multiplier</label><select id="mixMultiplier"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option><option value="8">8x</option><option value="10">10x</option></select></div>
@@ -62,18 +71,22 @@
           <div class="row3">
             <div class="field"><label>Fluid volume preset</label><select id="fluidPreset"><option value="50">50 mL</option><option value="100">100 mL</option><option value="250">250 mL</option><option value="500" selected>500 mL</option><option value="1000">1000 mL</option><option value="custom">Custom</option></select></div>
             <div class="field"><label>Final mixed fluid volume, mL</label><input id="mixMl" type="number" value="500" min="1"></div>
-            <div class="field"><label>Rate dose</label><input id="rateDose" type="number" value="0.2" min="0" step="0.05"></div>
+            <div class="field"><label id="rateDoseLabel">Rate dose</label><input id="rateDose" type="number" value="0.2" min="0.001" step="0.05"></div>
           </div>
           <div class="field"><label>Sedatives to compare</label><div class="drug-checks" id="sedativeChecks"></div></div>
+          <div id="comparisonMixtures"></div>
+          <p class="small">추가 선택 약제는 각각의 약물량과 최종 혼합 부피를 입력해야 mL/hr가 표시됩니다. 표시된 혼합값은 예시이며 실제 제제 농도를 확인하세요.</p>
           <div class="pillbar" id="sedQuick"></div>
           <div class="note warn">RSE continuous infusion은 airway, BP, ICU, continuous EEG 또는 가능한 EEG monitoring을 전제로 한다.</div>
         </aside>
         <div class="panel">
           <h2>Infusion result</h2>
+          <div id="sedError" class="note danger hidden" role="status"></div>
+          <p id="sedDoseWarning" class="small" role="status"></p>
           <div class="result">
             <div class="metric"><div class="k">Dosing weight</div><div class="v" id="dwOut">-</div></div>
             <div class="metric"><div class="k">Concentration</div><div class="v" id="concOut">-</div></div>
-            <div class="metric"><div class="k">Selected drugs</div><div class="v" id="rateOut">-</div></div>
+            <div class="metric"><div class="k">Primary drug infusion rate</div><div class="v" id="rateOut">-</div></div>
           </div>
           <div class="result">
             <div class="metric"><div class="k">Loading dose</div><div class="v" id="loadOut">-</div></div>
@@ -102,6 +115,7 @@
         </aside>
         <div class="panel">
           <h2>Loading result</h2>
+          <div id="asmError" class="note danger hidden" role="status"></div>
           <div class="result">
             <div class="metric"><div class="k">Dose</div><div class="v" id="asmDoseOut">-</div></div>
             <div class="metric"><div class="k">Capped dose</div><div class="v" id="asmLoadOut">-</div></div>
@@ -139,18 +153,18 @@
           <label class="check"><input id="caveAge" type="checkbox"> Age &lt;65</label>
           <label class="check"><input id="caveVolume" type="checkbox"> ICH volume &gt;10 mL</label>
           <label class="check"><input id="caveEarly" type="checkbox"> Early seizure</label>
-          <h3>STESS quick</h3>
+          <h3>STESS</h3>
           <label class="check"><input id="stessAge" type="checkbox"> Age >=65</label>
           <label class="check"><input id="stessNoHx" type="checkbox"> No prior seizure history</label>
           <div class="field"><label>Worst seizure type</label><select id="stessType"><option value="0">Focal/simple/absence</option><option value="1">Generalized convulsive</option><option value="2">NCSE in coma</option></select></div>
-          <div class="field"><label>Consciousness</label><select id="stessCon"><option value="0">Alert/somnolent</option><option value="1">Confused/stupor</option><option value="2">Coma</option></select></div>
+          <div class="field"><label>Consciousness</label><select id="stessCon"><option value="0">Alert/somnolent</option><option value="1">Stupor/coma</option></select></div>
         </aside>
         <div class="panel">
           <h2>Score results</h2>
           <div class="result">
             <div class="metric"><div class="k">SeLECT</div><div class="v" id="selectOut">0</div></div>
             <div class="metric"><div class="k">CAVE</div><div class="v" id="caveOut">0</div></div>
-            <div class="metric"><div class="k">STESS quick</div><div class="v" id="stessOut">0</div></div>
+            <div class="metric"><div class="k">STESS</div><div class="v" id="stessOut">0</div></div>
           </div>
           <div id="scoreNotes" class="note"></div>
         </div>
@@ -171,6 +185,7 @@
           <li>Joshi S, Kapur J. Status epilepticus: Updates on mechanisms and treatments. <i>Epilepsia Open</i>. 2025.</li>
           <li>Galovic M, Dohler N, Erdelyi-Canavese B, et al. Prediction of late seizures after ischaemic stroke with a novel prognostic model: The SeLECT score. <i>Lancet Neurol</i>. 2018;17(2):143-152.</li>
           <li>Haapaniemi E, Strbian D, Rossi C, et al. The CAVE score for predicting late seizures after intracerebral hemorrhage. <i>Stroke</i>. 2014;45(7):1971-1976.</li>
+          <li>Rossetti AO, Logroscino G, Milligan TA, Michaelides C, Ruffieux C, Bromfield EB. Status Epilepticus Severity Score (STESS): a tool to orient early treatment strategy. <i>J Neurol</i>. 2008;255(10):1561-1566. <a href="https://doi.org/10.1007/s00415-008-0989-1" target="_blank" rel="noopener noreferrer">원문</a></li>
         </ol>
         <table>
           <thead><tr><th>Formula</th><th>Definition</th></tr></thead>
@@ -179,6 +194,10 @@
             <tr><td>mL/hr</td><td>mg/kg/hr * dosing weight kg / concentration mg/mL</td></tr>
             <tr><td>mg/kg/hr equivalent</td><td>공통 계산 단위. Propofol은 mcg/kg/min * 0.06 = mg/kg/hr로 환산.</td></tr>
             <tr><td>loading</td><td>min(mg/kg * dosing weight, max dose)</td></tr>
+            <tr><td>IBW</td><td>Devine: male 50 / female 45.5 + 2.3 × (height in inches − 60), kg. 성인식.</td></tr>
+            <tr><td>LBW</td><td>Janmahasatian: male 9270 × weight / (6680 + 216 × BMI); female 9270 × weight / (8780 + 244 × BMI), kg.</td></tr>
+            <tr><td>AdjBW</td><td>IBW + 0.4 × (actual − IBW), actual &gt; IBW일 때. 다른 경우 actual 사용. 약제별 체중식 적합성을 별도 확인.</td></tr>
+            <tr><td>STESS</td><td>Age ≥65: 2; no prior seizure: 1; generalized convulsive: 1 / NCSE in coma: 2; stupor/coma: 1. 최대 6.</td></tr>
           </tbody>
         </table>
         <p class="small">This tool is an educational clinical decision support draft, not a prescribing order. Verify local protocols, product concentration, renal/hepatic function, pregnancy status, ECG/BP/airway monitoring, and EEG context.</p>
@@ -191,7 +210,7 @@
       <div class="grid">
         <aside class="panel">
           <h2>Admin editor</h2>
-          <div class="note warn">정적 GitHub Pages 버전의 Admin은 서버 DB를 바꾸지 않고, 현재 브라우저의 localStorage 설정만 바꿉니다. 병원/전체 사용자에게 반영하려면 수정한 JSON을 repo의 `index.html` 기본값에 반영해야 합니다.</div>
+          <div class="note warn">웹 전용 로컬 설정 편집입니다. 변경값은 이 브라우저에만 적용됩니다. 기본값과의 차이를 검토하고 임상적으로 확인하세요. 스토어 앱에서는 설정 편집이 비활성화됩니다.</div>
           <h3>Actions</h3>
           <div class="pillbar">
             <button id="saveConfig" class="button">Save local</button>
@@ -214,10 +233,23 @@
         </div>
       </div>
     </section>
+    <section id="about" class="view hidden">
+      <div class="panel">
+        <h2>SE Calculator</h2>
+        <p>무료 · 광고 없음 · 계정 가입 없음 · 오프라인 계산</p>
+        <p>뇌전증지속증 관련 ASM loading, sedative infusion과 SeLECT·CAVE·STESS 점수를 확인하는 의료전문가용 성인 계산 보조 도구입니다. 진단·처방을 대신하지 않습니다.</p>
+        <p>최종 투여량은 기관 프로토콜과 실제 약품 농도로 확인하세요. 신장·간 기능, 임신 가능성, ECG/BP/airway/EEG monitoring 여부를 별도로 평가해야 합니다.</p>
+        <p><a href="privacy.html">개인정보 처리방침</a> · <a href="support.html">지원 및 오류 제보</a></p>
+        <p class="small">웹 버전 0.1.1 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
+        <p class="small">개발·운영: Wonwoo Lee. 저자 소속 표기와 별개로 기관의 공식 배포·임상 승인 여부는 확인되지 않았습니다.</p>
+      </div>
+    </section>
   </main>
   <footer>
     <b>Wonwoo Lee, M.D.</b> · Assistant Professor, Department of Neurology, Yongin Severance Hospital, Yonsei University College of Medicine · 363, Dongbaekjukjeon-daero, Giheung-gu, Yongin-si, Gyeonggi-do, Republic of Korea
   </footer>
+  <script src="release-config.js"></script>
+  <script src="calculator-core.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
