@@ -428,6 +428,13 @@
     function populate() {
       selectedSedatives = selectedSedatives.filter(k => sedatives[k]);
       if (!selectedSedatives.length) selectedSedatives = Object.keys(sedatives).slice(0, 1);
+      const previousPrimary = document.querySelector('#sedativeChecks input:checked')?.value;
+      const nextPrimary = selectedSedatives[0];
+      if (nextPrimary !== previousPrimary && !usesAutomaticMix(nextPrimary)) {
+        const mix = comparisonMixtures[nextPrimary] || { mg: '', ml: '' };
+        $('baseMixMg').value = mix.mg; $('mixMl').value = mix.ml;
+        $('rateDose').value = sedatives[nextPrimary].quick[0];
+      }
       $('sedativeChecks').innerHTML = Object.entries(sedatives).map(([k,v]) => `<label class="drug-chip" style="border-left-color:${v.color || '#1f6fb7'}"><input type="checkbox" value="${k}" ${selectedSedatives.includes(k) ? 'checked' : ''}> ${escapeHtml(v.label)}</label>`).join('');
       $('asmDrug').innerHTML = Object.entries(asms).map(([k,v]) => `<option value="${k}">${escapeHtml(v.label)}</option>`).join('');
       $('warningChecks').innerHTML = warningItems.map(([id,label]) => `<label class="check"><input id="warn_${id}" type="checkbox"> ${escapeHtml(label)}</label>`).join('');
@@ -469,6 +476,10 @@
       const keys = selectedSedativeKeys();
       updateMixtureInputs();
       calcBodyMetrics(); calcShooting(); calcAutoMixtures();
+      $('sedNotes').innerHTML = keys.map(k => {
+        const drug = sedatives[k];
+        return `<div class="drug-note" style="border-left-color:${drug.color || '#1f6fb7'}"><b>${escapeHtml(drug.label)}</b><br>${escapeHtml(drug.notes)}</div>`;
+      }).join('');
       let dw, conc, dose, rate;
       try {
         if (!keys.length) throw new Error('계산할 약제를 선택하세요.');
@@ -480,7 +491,7 @@
       } catch (error) {
         ['dwOut','concOut','rateOut','rangeOut','unitOut'].forEach(id => { $(id).textContent = '—'; });
         $('sedDoseWarning').textContent = '';
-        $('sedQuick').replaceChildren(); $('sedNotes').textContent = '';
+        $('sedQuick').replaceChildren();
         $('sedError').textContent = error.message; $('sedError').classList.remove('hidden');
         return;
       }
@@ -495,10 +506,6 @@
       const activeDrug = sedatives[keys[0]];
       $('sedQuick').innerHTML = activeDrug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${activeDrug.label} ${x} ${activeDrug.unit}</button>`).join('');
       $('sedQuick').querySelectorAll('button').forEach(b => b.onclick = () => { $('rateDose').value = b.dataset.dose; calcSed(); });
-      $('sedNotes').innerHTML = keys.map(k => {
-        const drug = sedatives[k];
-        return `<div class="drug-note" style="border-left-color:${drug.color || '#1f6fb7'}"><b>${escapeHtml(drug.label)}</b><br>${escapeHtml(drug.notes)}</div>`;
-      }).join('');
     }
     function updateAsmDoseOptions() {
       const d = asms[$('asmDrug').value];

@@ -367,3 +367,26 @@ test('ASM warning flags highlight related drugs and selected results without cha
   await expect(page.locator('#warningChecks input:checked')).toHaveCount(0);
   await expect(page.locator('#asmCautions')).not.toContainText('주의 2건');
 });
+
+
+test('a saved nonautomatic primary never inherits the default mixture; notes remain available before entering concentration', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('se-calculator-admin-config-v1', JSON.stringify({
+    sedatives: JSON.parse(document.getElementById('sedativeConfig').value),
+    asms: JSON.parse(document.getElementById('asmConfig').value),
+    selectedSedatives: ['propofol','pentobarbital']
+  })));
+  await page.reload(); await page.locator('#wt').fill('60');
+  await expect(page.locator('#baseMixMg')).toHaveValue('');
+  await expect(page.locator('#mixMl')).toHaveValue('');
+  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"]')).toHaveText('혼합액 입력 필요');
+  await expect(page.locator('#rateOut')).toHaveText('—');
+  await expect(page.locator('#propofolLoadingOut')).toHaveText('120 mg');
+  await page.locator('#infusionOptions summary').click();
+  await expect(page.locator('#sedNotes')).toContainText('PRIS');
+  await expect(page.locator('#sedNotes')).toContainText('Pentobarbital');
+  await page.locator('#baseMixMg').fill('1000'); await page.locator('#mixMl').fill('100');
+  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"] .native-dose')).toHaveText('83.33 mcg/kg/min');
+  await expect(page.locator('#rateOut')).toHaveText('7.2 mL/hr');
+  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="pentobarbital"]')).toHaveText('혼합액 입력 필요');
+});
