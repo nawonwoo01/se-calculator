@@ -14,7 +14,7 @@
   <header>
     <div class="title">
       <h1>SE ASM/Sedative Calculator</h1>
-      <span class="meta" id="appVersion">v0.4.0 · 임상 검토 전 · 웹 업데이트 2026-10-22</span>
+      <span class="meta" id="appVersion">v0.5.0 · 임상 검토 전 · 웹 업데이트 2026-10-22</span>
     </div>
   </header>
   <main>
@@ -74,10 +74,10 @@
         <h2>2. 약제 선택 · 혼합액 · 전체 환산표</h2>
         <div class="field"><label>표에 표시할 약제 (복수 선택)</label><div class="drug-checks" id="sedativeChecks"></div></div>
         <div class="row mix-selectors">
-          <div class="field"><label for="fluidPreset">자동 mix 최종 부피</label><select id="fluidPreset"><option value="100">100 mL</option><option value="250">250 mL</option><option value="500" selected>500 mL</option><option value="1000">1000 mL</option></select></div>
-          <div class="field"><label for="mixMultiplier">Mix 배수</label><select id="mixMultiplier"><option value="1">1배</option><option value="2">2배</option><option value="3">3배</option><option value="4">4배</option><option value="5">5배</option><option value="6">6배</option><option value="7">7배</option><option value="8">8배</option><option value="9">9배</option><option value="10">10배</option></select></div>
+          <div class="field"><label for="fluidPreset">MDZ/Ket 자동 mix 최종 부피</label><select id="fluidPreset"><option value="100">100 mL</option><option value="250">250 mL</option><option value="500" selected>500 mL</option><option value="1000">1000 mL</option></select></div>
+          <div class="field"><label for="mixMultiplier">MDZ/Ket mix 배수</label><select id="mixMultiplier"><option value="1">1배</option><option value="2">2배</option><option value="3">3배</option><option value="4">4배</option><option value="5">5배</option><option value="6">6배</option><option value="7">7배</option><option value="8">8배</option><option value="9">9배</option><option value="10">10배</option></select></div>
         </div>
-        <div class="field"><label for="mixtureMode">Midazolam·Ketamine 혼합 방식</label><select id="mixtureMode"><option value="auto">체중·수액·배수로 자동 계산 (기본)</option><option value="manual">직접 입력한 혼합액 사용</option></select></div>
+        <div class="field"><label for="mixtureMode">혼합 방식</label><select id="mixtureMode"><option value="auto">근거·제제 기준 자동 계산 (기본)</option><option value="manual">직접 입력한 혼합액 사용</option></select></div>
         <div id="manualMixtures">
           <h3 id="primaryMixtureLabel">혼합액</h3>
           <div id="primaryManualMixture">
@@ -89,7 +89,7 @@
           </div>
           <div id="comparisonMixtures"></div>
         </div>
-        <p class="small">자동 1배: <b>체중 1 kg당 약물 1 mg / 최종 100 mL</b> (Midazolam·Ketamine 각각 별도 수액). Propofol·Pentobarbital·Thiopental은 실제 사용하는 <b>각 약제의 1배 약물량·최종 부피</b>를 확인해 입력하세요. N배는 해당 1배 약물량에 곱합니다.</p>
+        <p class="small">MDZ/Ket 자동1배는 체중kg당1 mg/최종100 mL입니다. 다른 세 약제는 표 아래에서 <b>근거별 투여 용량과 제제·희석 농도를 선택</b>하면 자동 계산됩니다. N배는 MDZ/Ket에 적용하며 제제 농도를 임의로 높이지 않습니다.</p>
         <p id="autoMixWeight" class="small"></p>
         <div id="autoMixError" class="note danger hidden" role="status"></div>
         <div id="mixtureSummary" class="mixture-summary" aria-live="polite"></div>
@@ -97,6 +97,7 @@
         <h3>주입속도 → 투여량 · 전체 표</h3>
         <p class="small">속도를 입력하지 않아도 표를 바로 볼 수 있습니다. 단위는 <b>mg/kg/hr</b>이며 Propofol은 <b>mcg/kg/min도 병기</b>합니다. 숫자는 농도 환산값이며 권장 투여량이 아닙니다.</p>
         <div id="flowOverviewTable"></div>
+        <div id="evidenceControls" class="evidence-controls"></div>
         <details id="doseTableOptions">
           <summary>투여량 → 주입속도 · 기존 전체 용량표</summary>
           <div id="autoRateTable"><div id="rateTable"></div></div>
@@ -109,13 +110,13 @@
       </div>
       <details id="flowDetails" class="panel auto-mix-panel">
         <summary>직접 속도 입력 · 하루 수액량 · 수액 소진시간</summary>
-        <p class="small">cc/hr를 바꾸면 투여량이 바뀝니다. N배를 바꾸면 현재 투여량을 유지하도록 속도를 환산합니다. 자동 mix에서 수액 크기만 바꾸면 농도·속도는 유지되고 소진시간이 바뀝니다.</p>
+        <p class="small">cc/hr를 바꾸면 투여량이 바뀝니다. MDZ/Ket의 N배를 바꾸면 해당 약제의 현재 투여량을 유지하도록 속도를 환산합니다. 다른 세 약제는 선택한 제제·희석 농도를 그대로 사용합니다. 자동 mix에서 수액 크기만 바꾸면 농도·속도는 유지되고 소진시간이 바뀝니다.</p>
         <div id="scaledMixResults" class="loading-cards"></div>
         <p class="small">24시간 수액량은 각 약제 혼합액만 계산합니다. 소진시간은 계산값이며 허용 교체시간이 아닙니다. 제제 안정성과 기관의 교체 기준을 별도로 확인하세요.</p>
       </details>
       <div class="panel shooting-panel">
         <h2>3. Shooting · IV loading · 선택 약제</h2>
-        <p class="small">지속주입 혼합액과 별도로 계산합니다. 기존 앱의 mg/kg 설정을 사용한 1회 계산값이며 반복·누적 투여량이나 투여 속도를 정하지 않습니다.</p>
+        <p class="small">지속주입 혼합액과 별도로 계산합니다. 선택 근거의 mg/kg(기존 약제는 기본 설정)을 사용한 단회 계산값이며 반복·누적 투여량이나 투여 속도를 정하지 않습니다.</p>
         <p id="loadingWeight" class="small"></p>
         <div id="loadingError" class="note danger hidden" role="status"></div>
         <div id="loadOut" class="loading-cards" aria-live="polite"></div>
@@ -218,6 +219,12 @@
     <section id="refs" class="view hidden">
       <div class="panel">
         <h2>Evidence and formulas</h2>
+        <h3>날짜별 용량 근거 검토 · 변경 고려사항</h3>
+        <p class="small">문헌 연도와 검색·검토일을 구분합니다. 검토 기록은 누적하며, 근거 간 차이를 하나의 범위로 합치거나 더 최신이라는 이유만으로 우선 적용하지 않습니다.</p>
+        <div id="evidenceHistory"></div>
+        <h3>계산에 연결된 원문</h3>
+        <div id="evidenceSources"></div>
+        <h3>기존 참고문헌</h3>
         <p class="small" id="evidenceText">Core dosing follows current guideline/review sources and ESETT evidence. The citation list below is formatted for quick reference and manuscript-style checking.</p>
         <ol class="small refs-list">
           <li>Glauser T, Shinnar S, Gloss D, et al. Evidence-based guideline: Treatment of convulsive status epilepticus in children and adults. <i>Epilepsy Curr</i>. 2016;16(1):48-61.</li>
@@ -236,6 +243,7 @@
           <tbody>
             <tr><td>concentration</td><td>total drug mg / total volume mL</td></tr>
             <tr><td>자동 1배 / N배 mix</td><td>Midazolam·Ketamine 각각의 mg = 투여 체중 kg × 최종 혼합 부피 mL /100 × N. 이번 계산기의 체중kg : 100 mL당 약물mg = 1:1 정의이며 처방 기준이 아님. 1배에서 10 mL/hr =0.1 mg/kg/hr.</td></tr>
+            <tr><td>제제·희석 기준 자동 혼합</td><td>약물mg = 선택 농도mg/mL × 제품 또는 조제 최종 부피mL. 투여 용량 지침과 농도 근거는 별개이며 MDZ/Ket N배를 완제품에 적용하지 않음.</td></tr>
             <tr><td>mL/hr</td><td>mg/kg/hr * dosing weight kg / concentration mg/mL</td></tr>
             <tr><td>cc/hr → mg/kg/hr</td><td>mL/hr × concentration mg/mL / dosing weight kg. 1 cc =1 mL.</td></tr>
             <tr><td>24시간 수액량 / 소진시간</td><td>mL/hr ×24; 최종 부피 mL / mL/hr. 소진시간은 약제 안정성이나 허용 교체시간을 뜻하지 않음.</td></tr>
@@ -257,7 +265,7 @@
       <div class="grid">
         <aside class="panel">
           <h2>Admin editor</h2>
-          <div class="note warn">웹 전용 로컬 설정 편집입니다. 변경값은 이 브라우저에만 적용됩니다. 기본값과의 차이를 검토하고 임상적으로 확인하세요. 스토어 앱에서는 설정 편집이 비활성화됩니다.</div>
+          <div class="note warn">웹 전용 로컬 설정 편집입니다. 변경값은 이 브라우저에만 적용됩니다. 근거 프리셋을 사용하는 세 진정제의 자동 모드는 연결된 원문 값을 사용하며, 로컬 용량 설정은 직접 입력 모드에서 확인하세요. 기본값과의 차이를 검토하고 임상적으로 확인하세요. 스토어 앱에서는 설정 편집이 비활성화됩니다.</div>
           <h3>Actions</h3>
           <div class="pillbar">
             <button id="saveConfig" class="button">Save local</button>
@@ -287,7 +295,7 @@
         <p>뇌전증지속증 관련 ASM loading, sedative infusion과 SeLECT·CAVE·STESS 점수를 확인하는 의료전문가용 성인 계산 보조 도구입니다. 진단·처방을 대신하지 않습니다.</p>
         <p>최종 투여량은 기관 프로토콜과 실제 약품 농도로 확인하세요. 신장·간 기능, 임신 가능성, ECG/BP/airway/EEG monitoring 여부를 별도로 평가해야 합니다.</p>
         <p><a href="privacy.html">개인정보 처리방침</a> · <a href="support.html">지원 및 오류 제보</a></p>
-        <p class="small">웹 버전 0.4.0 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
+        <p class="small">웹 버전 0.5.0 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
         <p class="small">개발·운영: Wonwoo Lee. 저자 소속 표기와 별개로 기관의 공식 배포·임상 승인 여부는 확인되지 않았습니다.</p>
       </div>
     </section>
@@ -297,6 +305,7 @@
   </footer>
   <script src="release-config.js"></script>
   <script src="calculator-core.js"></script>
+  <script src="evidence-catalog.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

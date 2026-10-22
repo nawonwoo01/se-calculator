@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const base = 'https://nawonwoo01.github.io/se-calculator/';
-const files = ['index.html', 'app.js', 'calculator-core.js', 'release-config.js', 'sw.js', 'styles.css'];
+const files = ['index.html', 'app.js', 'calculator-core.js', 'evidence-catalog.js', 'release-config.js', 'sw.js', 'styles.css'];
 const digest = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
 (async () => {
   const deadline = Date.now() + 300000;

@@ -84,3 +84,21 @@ test('zero flow has zero dose/volume and no finite bag time; invalid flows are r
   assert.throws(() => core.infusionFromFlow(1e308, 60, 60, 100));
   assert.throws(() => core.flowForMultiplier(40, 1, 0));
 });
+
+
+test('product-based automatic mixtures and source-native doses have independent arithmetic', () => {
+  const evidence = require('../evidence-catalog.js');
+  assert.deepEqual(core.fixedMixture(10,100), {mg:1000,ml:100,concentration:10});
+  assert.equal(core.infusion(20,'mcg/kg/min',60,1000,100).mlHr,7.2);
+  assert.equal(core.infusion(4,'mg/kg/hr',60,1000,100).mlHr,24);
+  assert.equal(core.infusion(0.5,'mg/kg/hr',60,1000,20).mlHr,0.6);
+  assert.equal(core.infusion(0.5,'mg/kg/hr',60,500,250).mlHr,15);
+  assert.equal(core.infusion(0.5,'mg/kg/hr',60,1000,250).mlHr,7.5);
+  for (const profiles of Object.values(evidence.profiles)) for (const p of profiles) {
+    assert.ok(evidence.sources[p.source].url.startsWith('https://'));
+    assert.ok(p.doses.includes(p.defaultDose)); assert.ok(p.loads.includes(p.defaultLoad));
+    assert.ok(p.doses.every(d => d === p.startDose || d >= p.min && d <= p.max));
+  }
+  for (const invalid of ['',0,-1,Infinity,NaN]) assert.throws(()=>core.fixedMixture(invalid,100));
+  assert.throws(()=>core.fixedMixture(10,1e308));
+});

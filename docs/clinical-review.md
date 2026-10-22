@@ -54,3 +54,12 @@
 - 경구 Topiramate/Perampanel 및 기타 메모는 IV loading과 구분하고 별도 근거·적응/허가·경로·제품 확인 후 추가 여부를 판단한다.
 - ‘신장 기능’ 경고는 LEV 유지용량/투석 관련 표시다. loading을 자동 감량하지 않는다. VPA 임신 경고는 장기 사용과 단회 응급 판단을 구분한다.
 - Propofol과 barbiturate에 MDZ/Ketamine 자동1배 농도를 적용하지 않는다. 사용자별 실제1배 약물량/최종 부피를 독립 입력하고 N배는 그 농도의 산술 환산으로만 표시한다. 희석 적합성과 실제 제제 안정성을 확인한다.
+
+## 0.5.0 · 근거별 계산 선택 추가
+
+2026-10-22 사용자 요청으로 세 진정제의 근거·제제 자동 계산을 추가했다. 상세 출처/대조 위치/기존값 비교는 `evidence-review/2026-10-22.md`, 실제 선택 데이터는 `evidence-catalog.js`에 기록했다. 위의 ‘현재 번들 값’ 표는0.4.0 당시 기록이며 이후 선택지는 이 절과 근거 카탈로그를 우선 확인한다.
+
+- NCS의 기본 loading(Propofol2/Pentobarbital5/Thiopental3 mg/kg)을 보존하며 범위 안의 loading 대안을 선택한다. 반복·누적 loading 또는 주입 속도 자동 지시는 없다.
+- Propofol NCS의 시작20 mcg/kg/min와 유지30–200을 구분한다. 별도 성인 SOP2022의4–10 mg/kg/hr와 단위를 합치지 않는다. Thiopental SOP2022의load5/유지3–7도 NCS와 구분한다. SOP는 고수준 비교 근거나 기관 승인으로 표시하지 않는다.
+- Propofol10 mg/mL 완제품, Hikma Pentobarbital50 mg/mL, Panpharma Thiopental2/4 mg/mL는 각각 확인한 제품·조제 문서에서 가져온 농도다. 용량 지침과 제제/국내 허가·기관 적합성을 구분해 검토해야 한다. Pentobarbital의 RSE 지속주입 적합성·용매 독성, Thiopental 중심정맥·안정성과 알칼리성을 확인한다.
+- MDZ/Ket N배를 다른 세 제제에 자동 곱하지 않는다. 기타 임의 제품 농도·희석액을 추정하지 않는다. 실제 처방 선택은 원문·기관 프로토콜·사용 제품으로 독립 확인한다. 기술 검증을 임상 승인으로 바꾸지 않는다.

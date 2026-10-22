@@ -68,7 +68,7 @@ test('existing browser cases remain available after the web update', async ({ pa
   await expect(page.locator('#patientSelect')).toHaveValue('legacy-case');
   await expect(page.locator('#wt')).toHaveValue('60');
   await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
-  await expect(page.locator('#appVersion')).toContainText('v0.4.0');
+  await expect(page.locator('#appVersion')).toContainText('v0.5.0');
 });
 
 test('legacy v8 PWA waits for user action before activating the new cache', async ({ page }) => {
@@ -103,7 +103,7 @@ test('legacy v8 PWA waits for user action before activating the new cache', asyn
     await Promise.all([page.waitForEvent('load'), page.locator('#applyUpdate').click()]);
     await page.waitForFunction(async () => {
       const names = await caches.keys();
-      return names.includes('se-calculator-0.4.0-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
+      return names.includes('se-calculator-0.5.0-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
     });
     await fillPatient(page);
     await expect(page.locator('#rateOut')).toHaveText('10 mL/hr');
@@ -291,6 +291,7 @@ test('default overview needs only weight, fluid size and multiplier, without opt
 test('every sedative appears in both tables and separate loading with its own concentration and N-fold mix', async ({ page }) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await page.locator('#wt').fill('60');
+  await page.locator('#mixtureMode').selectOption('manual');
   for (const [key,mg,ml] of [['propofol',1000,100],['pentobarbital',500,50],['thiopental',1000,100]]) {
     await page.locator(`#sedativeChecks input[value="${key}"]`).check();
     await expect(page.locator(`#flowOverviewTable tr[data-flow="30"] td[data-drug="${key}"]`)).toHaveText('혼합액 입력 필요');
@@ -369,7 +370,7 @@ test('ASM warning flags highlight related drugs and selected results without cha
 });
 
 
-test('a saved nonautomatic primary never inherits the default mixture; notes remain available before entering concentration', async ({ page }) => {
+test('saved primary uses its own automatic product preparation; manual entry remains an explicit option', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.setItem('se-calculator-admin-config-v1', JSON.stringify({
     sedatives: JSON.parse(document.getElementById('sedativeConfig').value),
@@ -377,16 +378,115 @@ test('a saved nonautomatic primary never inherits the default mixture; notes rem
     selectedSedatives: ['propofol','pentobarbital']
   })));
   await page.reload(); await page.locator('#wt').fill('60');
-  await expect(page.locator('#baseMixMg')).toHaveValue('');
-  await expect(page.locator('#mixMl')).toHaveValue('');
-  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"]')).toHaveText('혼합액 입력 필요');
-  await expect(page.locator('#rateOut')).toHaveText('—');
+  await expect(page.locator('#primaryManualMixture')).toBeHidden();
+  await expect(page.locator('#compare_pentobarbital_mg')).toHaveCount(0);
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('1000 mg / 100 mL');
+  await expect(page.locator('#evidenceResult_pentobarbital')).toContainText('1000 mg / 20 mL');
   await expect(page.locator('#propofolLoadingOut')).toHaveText('120 mg');
   await page.locator('#infusionOptions summary').click();
   await expect(page.locator('#sedNotes')).toContainText('PRIS');
-  await expect(page.locator('#sedNotes')).toContainText('Pentobarbital');
+  await page.locator('#mixtureMode').selectOption('manual');
   await page.locator('#baseMixMg').fill('1000'); await page.locator('#mixMl').fill('100');
-  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"] .native-dose')).toHaveText('83.33 mcg/kg/min');
   await expect(page.locator('#rateOut')).toHaveText('7.2 mL/hr');
   await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="pentobarbital"]')).toHaveText('혼합액 입력 필요');
+});
+
+test('all three additional sedatives calculate from evidence and preparation selections without amount entry', async ({ page }) => {
+  const errors=[]; page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  for (const key of ['propofol','pentobarbital','thiopental']) {
+    await page.locator(`#sedativeChecks input[value="${key}"]`).check();
+    await expect(page.locator(`#evidence_${key}`)).toBeVisible();
+    await expect(page.locator(`#compare_${key}_mg`)).toHaveCount(0);
+    await expect(page.locator(`#evidenceDose_${key} option`).first()).toContainText('_(NCS 2012');
+  }
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('1000 mg / 100 mL');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('7.2 mL/hr');
+  await expect(page.locator('#evidenceResult_pentobarbital')).toContainText('0.6 mL/hr');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('500 mg / 250 mL');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('15 mL/hr');
+  await page.locator('#evidenceDose_propofol').selectOption('50');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('18 mL/hr');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('180 mg/hr');
+  await page.locator('#evidenceLoad_pentobarbital').selectOption('10');
+  await expect(page.locator('#pentobarbitalLoadingOut')).toHaveText('600 mg');
+  await page.locator('#mixMultiplier').selectOption('10');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('1000 mg / 100 mL');
+  await expect(page.locator('#evidenceResult_pentobarbital')).toContainText('1000 mg / 20 mL');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('500 mg / 250 mL');
+  await page.locator('#evidenceConcentration_thiopental').selectOption('4');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('1000 mg / 250 mL');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('7.5 mL/hr');
+  await page.locator('#evidenceVolume_thiopental').selectOption('500');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('2000 mg / 500 mL');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('7.5 mL/hr');
+  await page.locator('#wt').fill('');
+  for (const key of ['propofol','pentobarbital','thiopental']) await expect(page.locator(`#evidenceResult_${key}`)).not.toContainText('mL/hr');
+  expect(errors).toEqual([]);
+});
+
+test('switching evidence preserves exact units and updates loading, dose ranges, notes and reference history', async ({ page }) => {
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  await page.locator('#sedativeChecks input[value="propofol"]').check();
+  await page.locator('#sedativeChecks input[value="thiopental"]').check();
+  await page.locator('#evidence_propofol').selectOption('sop2022');
+  await expect(page.locator('#evidenceDose_propofol option').first()).toHaveText('4 mg/kg/hr_(Malter SOP 2022·범위 내 선택)');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('24 mL/hr');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('240 mg/hr');
+  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"] .native-dose')).toHaveText('83.33 mcg/kg/min');
+  await expect(page.locator('#rateTable tr[data-drug="propofol"][data-dose="4"]')).toContainText('24 mL/hr');
+  await page.locator('#evidence_thiopental').selectOption('sop2022');
+  await expect(page.locator('#thiopentalLoadingOut')).toHaveText('300 mg');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('90 mL/hr');
+  await expect(page.locator('#rateTable tr[data-drug="thiopental"][data-dose="7"]')).toContainText('210 mL/hr');
+  await page.locator('#evidence_thiopental').selectOption('ncs2012');
+  await expect(page.locator('#thiopentalLoadingOut')).toHaveText('180 mg');
+  await page.locator('[data-tab="refs"]').click();
+  await expect(page.locator('#evidenceHistory')).toContainText('2026-10-22');
+  await expect(page.locator('#evidenceHistory')).toContainText('변경 고려사항');
+  await expect(page.locator('#evidenceSources')).toContainText('2024-02-12');
+  await expect(page.locator('#ref_sop2022 a')).toHaveAttribute('href','https://doi.org/10.1186/s42466-022-00199-4');
+  await page.locator('[data-tab="sedation"]').click();
+  await page.locator('#caseOptions summary').click(); await page.locator('#newCase').click();
+  await page.locator('#wt').fill('70');
+  await expect(page.locator('#evidence_propofol')).toHaveValue('ncs2012');
+  await expect(page.locator('#thiopentalLoadingOut')).toHaveText('210 mg');
+});
+
+
+test('product concentrations stay independent of MDZ/Ket multipliers and preserve dose on a valid concentration change', async ({ page }) => {
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  for (const key of ['propofol','pentobarbital','thiopental']) await page.locator(`#sedativeChecks input[value="${key}"]`).check();
+  await page.locator('#flowDetails summary').click();
+  await page.locator('#propofolFlow').fill('30'); await page.locator('#thiopentalFlow').fill('30');
+  await page.locator('#mixMultiplier').selectOption('10');
+  await expect(page.locator('#propofolFlow')).toHaveValue('30');
+  await expect(page.locator('#propofolFlowDose')).toHaveText('5 mg/kg/hr · 83.33 mcg/kg/min');
+  await expect(page.locator('#pentobarbitalFlow')).toHaveValue('10');
+  await expect(page.locator('#thiopentalFlowDose')).toHaveText('1 mg/kg/hr');
+  await page.locator('#evidenceConcentration_thiopental').selectOption('4');
+  await expect(page.locator('#thiopentalFlow')).toHaveValue('15');
+  await expect(page.locator('#thiopentalFlowDose')).toHaveText('1 mg/kg/hr');
+  await page.locator('#thiopentalFlow').fill('');
+  await page.locator('#evidenceConcentration_thiopental').selectOption('2');
+  await expect(page.locator('#thiopentalFlow')).toHaveValue('');
+  await expect(page.locator('#thiopentalFlowDose')).toHaveText('—');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('15 mL/hr');
+});
+
+
+test('primary evidence changes reset the optional converter with the matching unit, including manual mode', async ({ page }) => {
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  await page.locator('#sedativeChecks input[value="propofol"]').check();
+  await page.locator('#sedativeChecks input[value="midazolam"]').uncheck();
+  await page.locator('#sedativeChecks input[value="ketamine"]').uncheck();
+  await expect(page.locator('#rateDoseLabel')).toContainText('mcg/kg/min');
+  await page.locator('#evidence_propofol').selectOption('sop2022');
+  await expect(page.locator('#rateDoseLabel')).toContainText('mg/kg/hr');
+  await expect(page.locator('#rateDose')).toHaveValue('4');
+  await expect(page.locator('#rateOut')).toHaveText('24 mL/hr');
+  await page.locator('#mixtureMode').selectOption('manual');
+  await expect(page.locator('#rateDoseLabel')).toContainText('mcg/kg/min');
+  await expect(page.locator('#rateDose')).toHaveValue('20');
+  await expect(page.locator('#rateOut')).toHaveText('7.2 mL/hr');
 });

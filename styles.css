@@ -123,3 +123,8 @@
     #asmCautions ul { margin: 8px 0 0; padding-left: 20px; }
     #asmCautions li + li { margin-top: 7px; }
     #asm .checks { grid-template-columns: 1fr; }
+
+    .evidence-controls { display: grid; gap: 10px; margin-top: 14px; }
+    .evidence-drug h3 { margin-top: 0; }
+    .evidence-drug select { font-size: 14px; }
+    #evidenceSources .drug-note { border-left-color: var(--blue); }

@@ -48,6 +48,13 @@
     if (![baseMg, drugMg, concentration, doseAt10MlHr].every(v => Number.isFinite(v) && v > 0)) throw new Error('혼합액 입력값이 계산 범위를 초과했습니다.');
     return { baseMg, drugMg, concentration, doseAt10MlHr };
   }
+  function fixedMixture(concentrationMgMl, volumeMl) {
+    const concentration = positive(concentrationMgMl, '제제 농도 (mg/mL)');
+    const ml = positive(volumeMl, '최종 부피 (mL)');
+    const mg = concentration * ml;
+    if (!Number.isFinite(mg)) throw new Error('혼합액 입력값이 계산 범위를 초과했습니다.');
+    return { mg, ml, concentration };
+  }
   function nonnegativeFlow(flowMlHr) {
     if (flowMlHr === '' || flowMlHr == null || !Number.isFinite(Number(flowMlHr)) || Number(flowMlHr) < 0) throw new Error('주입속도 (mL/hr): 0 이상의 값을 입력하세요.');
     return Number(flowMlHr);
@@ -112,5 +119,5 @@
     if (config.evidenceText != null && !text(config.evidenceText)) throw new Error('근거 문구를 확인하세요.');
     return config;
   }
-  return { positive, weights, infusion, weightBasedMixture, infusionFromFlow, flowForMultiplier, loading, stess, validateConfig };
+  return { positive, weights, infusion, weightBasedMixture, fixedMixture, infusionFromFlow, flowForMultiplier, loading, stess, validateConfig };
 });
