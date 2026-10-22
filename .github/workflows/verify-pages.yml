@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - run: npm ci --no-audit
       - run: node scripts/verify-deployed-files.cjs
       - run: npx playwright install --with-deps chromium
       - run: CHROMIUM_PATH=$(node -p "require('@playwright/test').chromium.executablePath()") npm run test:production

@@ -5,10 +5,18 @@ test('deployed calculator displays the release and works online and offline', as
   page.on('pageerror', error => errors.push(error.message));
   const response = await page.goto('./');
   expect(response.status()).toBe(200);
-  await expect(page.locator('#appVersion')).toContainText('v0.3.0');
+  await expect(page.locator('#appVersion')).toContainText('v0.4.0');
   await expect(page.locator('#wt')).toHaveValue('');
   await page.locator('#wt').fill('60');
   await expect(page.locator('#ht')).toHaveValue('');
+  await expect(page.locator('#sedativeChecks')).toBeVisible();
+  await expect(page.locator('#flowOverviewTable')).toBeVisible();
+  await expect(page.locator('#flowOverviewTable tr[data-flow="40"] td')).toHaveText(['0.4','0.4']);
+  await page.locator('#sedativeChecks input[value="propofol"]').check();
+  await page.locator('#compare_propofol_mg').fill('1000'); await page.locator('#compare_propofol_ml').fill('100');
+  await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"] .native-dose')).toHaveText('83.33 mcg/kg/min');
+  await expect(page.locator('#propofolLoadingOut')).toHaveText('120 mg');
+  await page.locator('#sedativeChecks input[value="propofol"]').uncheck();
   await expect(page.locator('#oneMixTable tr[data-volume="100"] td')).toHaveText(['60 mg', '60 mg']);
   await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
@@ -17,6 +25,7 @@ test('deployed calculator displays the release and works online and offline', as
   await expect(page.locator('#midazolamMixMg')).toHaveText('60 mg');
   await expect(page.locator('#autoRateTable tr[data-drug="midazolam"][data-dose="0.1"]')).toContainText('10 mL/hr');
   await expect(page.locator('#mixEquivalent')).toContainText('10 mL/hr = 0.1 mg/kg/hr');
+  await page.locator('#flowDetails').evaluate(el => { el.open = true; });
   await page.locator('#midazolamFlow').fill('40');
   await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
   await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
@@ -37,6 +46,11 @@ test('deployed calculator displays the release and works online and offline', as
   await expect(page.locator('#asmLoadOut')).toHaveText('3600 mg');
   await page.locator('#asmDrug').selectOption('fpht');
   await expect(page.locator('#asmDoseOut')).toHaveText('20 mg PE/kg');
+  await page.locator('#warn_cardiac').check();
+  await expect(page.locator('#asmCautions')).toContainText('ECG');
+  await expect(page.locator('#asmAll tr[data-asm="fpht"]')).toHaveClass('asm-caution-row');
+  await expect(page.locator('#asmAll tr[data-asm="lev"]')).not.toHaveClass('asm-caution-row');
+  await expect(page.locator('#asmLoadOut')).toHaveText('1200 mg PE');
   await page.locator('[data-tab="scores"]').click();
   await page.locator('#stessAge').check(); await page.locator('#stessNoHx').check();
   await page.locator('#stessType').selectOption('2'); await page.locator('#stessCon').selectOption('1');
@@ -48,6 +62,7 @@ test('deployed calculator displays the release and works online and offline', as
   await page.goto('./index.html');
   await page.locator('#wt').fill('60');
   await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
+  await page.locator('#flowDetails').evaluate(el => { el.open = true; });
   await page.locator('#midazolamFlow').fill('40');
   await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
   await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
@@ -58,6 +73,6 @@ test('deployed calculator displays the release and works online and offline', as
   fs.mkdirSync('artifacts', { recursive: true });
   await page.screenshot({ path: 'artifacts/deployed-web-phone.png', fullPage: true });
   expect(errors).toEqual([]);
-  fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', '40 mL/hr = 0.4 mg/kg/hr and 960 mL/24 hr', '100 mL bag: 2.5 hr; 1 L: 25 hr', '2x preserves 0.4 mg/kg/hr at 20 mL/hr and 480 mL/24 hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
-  console.log('Deployed browser checks passed: weight-only mixtures, flow titration, daily fluid, bag time, dose-preserving multiplier, separate shooting and offline navigation.');
+  fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['visible full flow overview', 'ASM-specific warning flags without dose change', 'weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', '40 mL/hr = 0.4 mg/kg/hr and 960 mL/24 hr', '100 mL bag: 2.5 hr; 1 L: 25 hr', '2x preserves 0.4 mg/kg/hr at 20 mL/hr and 480 mL/24 hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
+  console.log('Deployed browser checks passed: visible full flow overview, integrated ASM warning flags, weight-only mixtures, flow titration, daily fluid, bag time, dose-preserving multiplier, separate shooting and offline navigation.');
 });
