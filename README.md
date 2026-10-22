@@ -2,13 +2,13 @@
 
 뇌전증지속증(status epilepticus)에서 항경련제 loading dose와 refractory status epilepticus sedative infusion rate를 빠르게 확인하기 위한 정적 HTML/PWA 계산기입니다.
 
-현재 웹 버전: **0.1.1 (2026-10-15)**. 사이트: https://nawonwoo01.github.io/se-calculator/
+현재 웹 버전: **0.2.0 (2026-10-22)**. 사이트: https://nawonwoo01.github.io/se-calculator/
 
-웹 공통 계산·입력·STESS·PE 단위·약제별 혼합 농도를 보완했습니다. `release/mobile-app`의 미출시 네이티브 앱 구성은 별도 PR에 있습니다. 이 웹 업데이트는 스토어 제출이나 임상 승인을 뜻하지 않습니다. 변경 내용과 확인 방법은 `docs/web-release.md`, 임상 검토 미완료 항목은 `docs/clinical-review.md`를 확인하세요.
+체중만으로 Midazolam·Ketamine 혼합량·주입속도·별도 shooting을 표시합니다. 1배 정의는 체중kg와 1 L당 약물mg의 1:1 관계이며, 100·250·500·1,000 mL와 1–10배를 선택해 자동 환산합니다. 키와 BMI·보정 체중은 선택 사항입니다. 사용자는 스토어 출시를 중단했으며 웹/PWA만 유지합니다. 변경 내용과 확인 방법은 `docs/web-release.md`, 임상 검토 미완료 항목은 `docs/clinical-review.md`를 확인하세요.
 
 ## 포함 기능
 
-- 환자 체중/키/성별 기반 actual/IBW/LBW/AdjBW 계산
+- 실제 체중만으로 자동 혼합표와 별도 shooting 계산, 선택적인 키·BMI·IBW/LBW/AdjBW
 - Levetiracetam, fosphenytoin, phenytoin, valproate, phenobarbital, lacosamide loading dose 계산
 - Midazolam, ketamine, propofol, pentobarbital, thiopental infusion rate 계산
 - 여러 sedative를 체크박스로 동시에 선택해 색상별 rate table 비교

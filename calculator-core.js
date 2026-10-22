@@ -12,14 +12,16 @@
   }
   function weights(weight, height, sex) {
     const actual = positive(weight, '체중 (kg)');
+    if (actual > 500) throw new Error('성인 입력 범위(체중 ≤500 kg)를 확인하세요.');
+    if (height === '' || height == null) return { actual, ibw: null, lbw: null, adj: null, bmi: null };
     const ht = positive(height, '키 (cm)');
-    if (actual > 500 || ht < 100 || ht > 250) throw new Error('성인 입력 범위(체중 ≤500 kg, 키 100–250 cm)를 확인하세요.');
+    if (ht < 100 || ht > 250) throw new Error('성인 키 입력 범위(100–250 cm)를 확인하세요.');
     if (!['male', 'female'].includes(sex)) throw new Error('체중식에 사용할 성별을 선택하세요.');
     const bmi = actual / ((ht / 100) ** 2);
     const ibw = (sex === 'male' ? 50 : 45.5) + 2.3 * (ht / 2.54 - 60);
     const lbw = (9270 * actual) / (sex === 'male' ? 6680 + 216 * bmi : 8780 + 244 * bmi);
     const adj = actual > ibw ? ibw + 0.4 * (actual - ibw) : actual;
-    return { actual, ibw, lbw, adj };
+    return { actual, ibw, lbw, adj, bmi };
   }
   function infusion(dose, unit, weight, drugMg, volumeMl) {
     const rate = positive(dose, '용량');
@@ -32,6 +34,19 @@
     const mlHr = mgKgHr * wt / concentration;
     if (![mgKgHr, concentration, mlHr].every(Number.isFinite)) throw new Error('입력값이 계산 범위를 초과했습니다.');
     return { mgKgHr, concentration, mlHr };
+  }
+  function weightBasedMixture(weight, volumeMl, multiplier = 1) {
+    const wt = positive(weight, '투여 체중');
+    const ml = positive(volumeMl, '최종 혼합 부피 (mL)');
+    const factor = positive(multiplier, 'Mix 배수');
+    // User-defined 1x: 1 mg per kg in a FINAL volume of 1,000 mL.
+    // This defines a concentration, independently of a prescribed dose.
+    const baseMg = wt * ml / 1000;
+    const drugMg = baseMg * factor;
+    const concentration = drugMg / ml;
+    const doseAt10MlHr = 10 * concentration / wt;
+    if (![baseMg, drugMg, concentration, doseAt10MlHr].every(v => Number.isFinite(v) && v > 0)) throw new Error('혼합액 입력값이 계산 범위를 초과했습니다.');
+    return { baseMg, drugMg, concentration, doseAt10MlHr };
   }
   function loading(dose, kind, weight, cap, minutes) {
     if (!['kg', 'fixed'].includes(kind)) throw new Error('지원하지 않는 투여 방식입니다.');
@@ -73,5 +88,5 @@
     if (config.evidenceText != null && !text(config.evidenceText)) throw new Error('근거 문구를 확인하세요.');
     return config;
   }
-  return { positive, weights, infusion, loading, stess, validateConfig };
+  return { positive, weights, infusion, weightBasedMixture, loading, stess, validateConfig };
 });

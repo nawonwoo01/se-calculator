@@ -1,6 +1,6 @@
 {
   "name": "se-calculator-web",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "description": "Static SE Calculator website and PWA regression checks",
   "scripts": {
@@ -8,5 +8,7 @@
     "test:ui": "playwright test",
     "test:production": "playwright test --config playwright.production.config.cjs"
   },
-  "devDependencies": { "@playwright/test": "1.64.0" }
+  "devDependencies": {
+    "@playwright/test": "1.64.0"
+  }
 }

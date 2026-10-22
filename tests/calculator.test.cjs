@@ -29,6 +29,29 @@ test('adult weight formulas', () => {
   assert.equal(core.weights(45, 170, 'female').adj, 45);
   assert.ok(core.weights(60, 170, 'female').lbw < core.weights(60, 170, 'male').lbw);
 });
+test('actual weight needs no height; derived weights are unavailable until height is supplied', () => {
+  assert.deepEqual(core.weights(60, '', 'male'), { actual: 60, ibw: null, lbw: null, adj: null, bmi: null });
+  assert.equal(core.weights(60, null, 'female').actual, 60);
+  assert.throws(() => core.weights(501, '', 'male'));
+  assert.ok(Math.abs(core.weights(60, 170, 'male').bmi - 20.7612456747) < 1e-8);
+});
+test('1x is weight mg per final litre, with volume and multiplier scaling independently', () => {
+  for (const weight of [45, 60, 83.5]) for (const volume of [100, 250, 500, 1000]) for (const factor of [1, 2, 5, 10]) {
+    const mix = core.weightBasedMixture(weight, volume, factor);
+    assert.equal(mix.drugMg, weight * volume / 1000 * factor);
+    assert.ok(Math.abs(mix.concentration - weight / 1000 * factor) < 1e-12);
+    assert.ok(Math.abs(mix.doseAt10MlHr - 0.01 * factor) < 1e-12);
+    assert.ok(Math.abs(core.infusion(0.1, 'mg/kg/hr', weight, mix.drugMg, volume).mlHr - 100 / factor) < 1e-10);
+  }
+  // 60 mg / 1 L at 10 mL/hr is 0.01 mg/kg/hr, not 0.1.
+  assert.equal(core.weightBasedMixture(60, 1000).drugMg, 60);
+  assert.equal(core.weightBasedMixture(60, 1000).doseAt10MlHr, 0.01);
+  for (const invalid of ['', 0, -1, NaN, Infinity, 'abc']) {
+    assert.throws(() => core.weightBasedMixture(invalid, 1000));
+    assert.throws(() => core.weightBasedMixture(60, invalid));
+    assert.throws(() => core.weightBasedMixture(60, 1000, invalid));
+  }
+});
 test('STESS combinations stay within 0–6; stupor/coma contributes 1', () => {
   assert.equal(core.stess(true, true, 2, 1), 6);
   assert.equal(core.stess(false, false, 0, 1), 1);

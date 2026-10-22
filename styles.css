@@ -73,6 +73,18 @@
     :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
     footer { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
     .checks { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+    .patient-panel, .shooting-panel, .auto-mix-panel { margin-bottom: 14px; }
+    .weight-entry { display: grid; grid-template-columns: minmax(160px,240px) 1fr; gap: 16px; align-items: center; }
+    .weight-entry input { min-height: 56px; font-size: 24px; font-weight: 700; }
+    details > summary { cursor: pointer; color: var(--nav); font-size: 14px; font-weight: 700; padding: 12px 0; min-height: 44px; }
+    details + details { border-top: 1px solid var(--line); }
+    .loading-cards { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .loading-cards .metric .v { font-size: 28px; }
+    .loading-cards p { margin-bottom: 0; }
+    .compact-table { overflow-x: auto; }
+    .compact-table th, .compact-table td { padding: 9px 7px; }
+    .infusion-options > summary { padding: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }
+    .mix-selectors { grid-template-columns: 1fr 1fr !important; }
     .check { display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--line); padding: 8px; border-radius: 7px; background: #fff; font-size: 13px; }
     .check input { width: auto; min-height: 0; margin-top: 2px; }
     @media (max-width: 860px) {
@@ -80,6 +92,7 @@
       .result { grid-template-columns: 1fr; }
       .row, .row3, .checks { grid-template-columns: 1fr; }
       .profile-actions { grid-template-columns: 1fr; }
+      .weight-entry { grid-template-columns: 1fr; gap: 0; }
       .title { display: block; }
       .meta { display: block; margin-top: 3px; }
       .install-box { grid-template-columns: 1fr; }
