@@ -39,9 +39,9 @@
     const wt = positive(weight, '투여 체중');
     const ml = positive(volumeMl, '최종 혼합 부피 (mL)');
     const factor = positive(multiplier, 'Mix 배수');
-    // User-defined 1x: 1 mg per kg in a FINAL volume of 1,000 mL.
+    // User-defined 1x: 1 mg per kg in a FINAL volume of 100 mL.
     // This defines a concentration, independently of a prescribed dose.
-    const baseMg = wt * ml / 1000;
+    const baseMg = wt * ml / 100;
     const drugMg = baseMg * factor;
     const concentration = drugMg / ml;
     const doseAt10MlHr = 10 * concentration / wt;
