@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'se-calculator-';
-const CACHE_NAME = `${CACHE_PREFIX}0.2.1-web-20261022-1`;
+const CACHE_NAME = `${CACHE_PREFIX}0.3.0-web-20261022-1`;
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './calculator-core.js', './release-config.js', './manifest.webmanifest', './icon.svg', './icons/icon-192.png', './icons/icon-512.png', './privacy.html', './support.html'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS.map(url => new Request(url, { cache: 'reload' })))));

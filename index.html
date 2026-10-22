@@ -14,7 +14,7 @@
   <header>
     <div class="title">
       <h1>SE ASM/Sedative Calculator</h1>
-      <span class="meta" id="appVersion">v0.2.1 · 임상 검토 전 · 웹 업데이트 2026-10-22</span>
+      <span class="meta" id="appVersion">v0.3.0 · 임상 검토 전 · 웹 업데이트 2026-10-22</span>
     </div>
   </header>
   <main>
@@ -79,12 +79,14 @@
         <div id="oneMixTable"></div>
       </div>
       <div class="panel auto-mix-panel">
-        <h2>3. N배 mix · 수액과 배수 선택</h2>
+        <h2>3. 혼합액과 주입속도 · 수액량 확인</h2>
+        <p class="small">cc/hr를 직접 바꾸면 환산 투여량(mg/kg/hr)이 바뀝니다. <b>N배를 바꾸면 현재 투여량을 유지하는 속도로 cc/hr를 환산</b>합니다. 수액 용량만 바꾸면 농도·속도·하루 수액량은 유지되고 소진시간이 바뀝니다.</p>
         <div class="row mix-selectors">
           <div class="field"><label for="fluidPreset">최종 혼합 부피</label><select id="fluidPreset"><option value="100">100 mL</option><option value="250">250 mL</option><option value="500" selected>500 mL</option><option value="1000">1000 mL</option></select></div>
           <div class="field"><label for="mixMultiplier">Mix 배수</label><select id="mixMultiplier"><option value="1">1배</option><option value="2">2배</option><option value="3">3배</option><option value="4">4배</option><option value="5">5배</option><option value="6">6배</option><option value="7">7배</option><option value="8">8배</option><option value="9">9배</option><option value="10">10배</option></select></div>
         </div>
         <div id="scaledMixResults" class="loading-cards" aria-live="polite"></div>
+        <p class="small">24시간 수액량은 현재 속도를 24시간 유지한 각 약제의 혼합액만 계산합니다. 소진시간은 실제 허용 교체시간이 아니며 제제 안정성과 기관의 교체 기준을 별도로 확인하세요.</p>
         <p id="mixEquivalent" class="note"></p>
         <h3>용량별 주입속도 · 선택한 혼합액 기준</h3>
         <div id="autoRateTable"></div>
@@ -119,13 +121,13 @@
           <div class="note warn">RSE continuous infusion은 airway, BP, ICU, continuous EEG 또는 가능한 EEG monitoring을 전제로 한다.</div>
         </aside>
         <div class="panel">
-          <h2>Infusion result</h2>
+          <h2>추가 용량의 주입속도 환산</h2>
           <div id="sedError" class="note danger hidden" role="status"></div>
           <p id="sedDoseWarning" class="small" role="status"></p>
           <div class="result">
             <div class="metric"><div class="k">Dosing weight</div><div class="v" id="dwOut">-</div></div>
             <div class="metric"><div class="k">Concentration</div><div class="v" id="concOut">-</div></div>
-            <div class="metric"><div class="k">Primary drug infusion rate</div><div class="v" id="rateOut">-</div></div>
+            <div class="metric"><div class="k">선택한 추가 용량의 환산 속도</div><div class="v" id="rateOut">-</div></div>
           </div>
           <div class="result">
             <div class="metric"><div class="k">Typical range</div><div class="v" id="rangeOut">-</div></div>
@@ -232,6 +234,8 @@
             <tr><td>concentration</td><td>total drug mg / total volume mL</td></tr>
             <tr><td>자동 1배 / N배 mix</td><td>각 약제 mg = 투여 체중 kg × 최종 혼합 부피 mL /100 × N. 이번 계산기의 체중kg : 100 mL당 약물mg = 1:1 정의이며 처방 기준이 아님. 1배에서 10 mL/hr =0.1 mg/kg/hr.</td></tr>
             <tr><td>mL/hr</td><td>mg/kg/hr * dosing weight kg / concentration mg/mL</td></tr>
+            <tr><td>cc/hr → mg/kg/hr</td><td>mL/hr × concentration mg/mL / dosing weight kg. 1 cc =1 mL.</td></tr>
+            <tr><td>24시간 수액량 / 소진시간</td><td>mL/hr ×24; 최종 부피 mL / mL/hr. 소진시간은 약제 안정성이나 허용 교체시간을 뜻하지 않음.</td></tr>
             <tr><td>mg/kg/hr equivalent</td><td>공통 계산 단위. Propofol은 mcg/kg/min * 0.06 = mg/kg/hr로 환산.</td></tr>
             <tr><td>loading</td><td>min(mg/kg * dosing weight, max dose)</td></tr>
             <tr><td>IBW</td><td>Devine: male 50 / female 45.5 + 2.3 × (height in inches − 60), kg. 성인식.</td></tr>
@@ -280,7 +284,7 @@
         <p>뇌전증지속증 관련 ASM loading, sedative infusion과 SeLECT·CAVE·STESS 점수를 확인하는 의료전문가용 성인 계산 보조 도구입니다. 진단·처방을 대신하지 않습니다.</p>
         <p>최종 투여량은 기관 프로토콜과 실제 약품 농도로 확인하세요. 신장·간 기능, 임신 가능성, ECG/BP/airway/EEG monitoring 여부를 별도로 평가해야 합니다.</p>
         <p><a href="privacy.html">개인정보 처리방침</a> · <a href="support.html">지원 및 오류 제보</a></p>
-        <p class="small">웹 버전 0.2.1 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
+        <p class="small">웹 버전 0.3.0 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
         <p class="small">개발·운영: Wonwoo Lee. 저자 소속 표기와 별개로 기관의 공식 배포·임상 승인 여부는 확인되지 않았습니다.</p>
       </div>
     </section>

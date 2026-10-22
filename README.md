@@ -2,9 +2,9 @@
 
 뇌전증지속증(status epilepticus)에서 항경련제 loading dose와 refractory status epilepticus sedative infusion rate를 빠르게 확인하기 위한 정적 HTML/PWA 계산기입니다.
 
-현재 웹 버전: **0.2.1 (2026-10-22)**. 사이트: https://nawonwoo01.github.io/se-calculator/
+현재 웹 버전: **0.3.0 (2026-10-22)**. 사이트: https://nawonwoo01.github.io/se-calculator/
 
-체중만으로 Midazolam·Ketamine 혼합량·주입속도·별도 shooting을 표시합니다. 1배 정의는 체중kg와 100 mL당 약물mg의 1:1 관계이며, 100·250·500·1,000 mL와 1–10배를 선택해 자동 환산합니다. 1배에서 10 mL/hr =0.1 mg/kg/hr입니다. 키와 BMI·보정 체중은 선택 사항입니다. 사용자는 스토어 출시를 중단했으며 웹/PWA만 유지합니다. 변경 내용과 확인 방법은 `docs/web-release.md`, 임상 검토 미완료 항목은 `docs/clinical-review.md`를 확인하세요.
+체중만으로 Midazolam·Ketamine 혼합량·주입속도·별도 shooting을 표시합니다. 1배 정의는 체중kg와 100 mL당 약물mg의 1:1 관계이며, 100·250·500·1,000 mL와 1–10배를 선택해 자동 환산합니다. 1배에서 10 mL/hr =0.1 mg/kg/hr입니다. 약제별 cc/hr 입력으로 환산 용량·24시간 수액량·계산상 소진시간을 확인하고, N배 변경 시 같은 용량의 속도를 환산합니다. 키와 BMI·보정 체중은 선택 사항입니다. 사용자는 스토어 출시를 중단했으며 웹/PWA만 유지합니다. 변경 내용과 확인 방법은 `docs/web-release.md`, 임상 검토 미완료 항목은 `docs/clinical-review.md`를 확인하세요.
 
 ## 포함 기능
 

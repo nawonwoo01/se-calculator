@@ -6,6 +6,8 @@
     const round = (n, d = 1) => !Number.isFinite(n) ? '—' : n !== 0 && Math.abs(n) < 10 ** -d ? n.toExponential(2) : String(Number(n.toFixed(d)));
     const comparisonMixtures = {};
     const AUTO_MIX_KEYS = ['midazolam', 'ketamine'];
+    const infusionFlows = { midazolam: '10', ketamine: '10' };
+    const oneTimesFlows = { midazolam: 10, ketamine: 10 };
     let deferredInstallPrompt = null;
     let patientProfiles = [];
     let activePatientId = '';
@@ -140,6 +142,7 @@
       $('patientName').value = ''; $('dosingWeight').value = 'actual'; $('asmWeight').value = 'actual';
       $('baseMixMg').value = '600'; $('mixMultiplier').value = '1'; $('fluidPreset').value = '500'; $('mixMl').value = '500'; $('rateDose').value = '0.2';
       $('mixtureMode').value = 'auto';
+      AUTO_MIX_KEYS.forEach(key => { infusionFlows[key] = '10'; oneTimesFlows[key] = 10; });
       Object.keys(comparisonMixtures).forEach(k => delete comparisonMixtures[k]);
       renderComparisonMixtures();
       document.querySelectorAll('#warningChecks input,#scores input').forEach(el => { el.checked = false; });
@@ -279,7 +282,12 @@
           const mg = SECore.weightBasedMixture(dw, ml).drugMg;
           return `<tr data-volume="${ml}"><th>${ml} mL</th><td>${round(mg,2)} mg</td><td>${round(mg,2)} mg</td></tr>`;
         }).join('')}</tbody></table></div>`;
-        $('scaledMixResults').innerHTML = AUTO_MIX_KEYS.map((key, i) => `<div class="metric"><div class="k">${labels[i]} · ${multiplier}배</div><div class="v" id="${key}MixMg">${round(mix.drugMg,2)} mg</div><p class="small">1배 ${round(mix.baseMg,2)} mg × ${multiplier}<br>최종 ${volume} mL · ${round(mix.concentration,3)} mg/mL</p></div>`).join('');
+        $('scaledMixResults').innerHTML = AUTO_MIX_KEYS.map((key, i) => `<div class="metric"><div class="k">${labels[i]} · ${multiplier}배</div><div class="v" id="${key}MixMg">${round(mix.drugMg,2)} mg</div><p class="small">1배 ${round(mix.baseMg,2)} mg × ${multiplier}<br>최종 ${volume} mL · ${round(mix.concentration,3)} mg/mL</p>
+          <div class="field flow-input"><label for="${key}Flow">${labels[i]} 주입속도 · cc/hr (=mL/hr)</label><input id="${key}Flow" type="number" min="0" step="any" inputmode="decimal" data-flow-drug="${key}" value="${escapeHtml(infusionFlows[key])}"></div>
+          <div id="${key}FlowError" class="small flow-error hidden" role="status"></div>
+          <dl class="flow-metrics" aria-live="polite"><dt>환산 투여량</dt><dd id="${key}FlowDose">—</dd><dt>24시간 수액량</dt><dd id="${key}DailyFluid">—</dd><dt>계산상 수액 소진시간</dt><dd id="${key}BagDuration">—</dd></dl>
+        </div>`).join('');
+        renderFlowMetrics();
         const flowAtPointOne = SECore.infusion(0.1, 'mg/kg/hr', dw, mix.drugMg, volume).mlHr;
         $('mixEquivalent').textContent = `${multiplier}배: 10 mL/hr = ${round(mix.doseAt10MlHr,3)} mg/kg/hr · 0.1 mg/kg/hr = ${round(flowAtPointOne,1)} mL/hr`;
         $('autoRateTable').innerHTML = `<div class="compact-table"><table><thead><tr><th>약제</th><th>용량</th><th>주입속도</th></tr></thead><tbody>${AUTO_MIX_KEYS.flatMap(key => {
@@ -296,6 +304,42 @@
         $('mixEquivalent').textContent = '';
         $('autoMixError').textContent = error.message; $('autoMixError').classList.remove('hidden');
       }
+    }
+    function formatBagDuration(hours) {
+      if (hours == null) return '— (0 mL/hr)';
+      if (hours * 60 < 1) return '1분 미만';
+      if (hours > 1000000) return `${round(hours,1)}시간`;
+      const minutes = Math.round(hours * 60);
+      const wholeHours = Math.floor(minutes / 60), remainder = minutes % 60;
+      return `${wholeHours ? wholeHours + '시간' : ''}${remainder ? (wholeHours ? ' ' : '') + remainder + '분' : ''}`;
+    }
+    function renderFlowMetrics() {
+      for (const key of AUTO_MIX_KEYS) {
+        const input = $(`${key}Flow`), errorBox = $(`${key}FlowError`);
+        if (!input) continue;
+        try {
+          const dw = selectedWeight('dosingWeight');
+          const volume = SECore.positive($('fluidPreset').value, '최종 혼합 부피');
+          const mix = SECore.weightBasedMixture(dw, volume, $('mixMultiplier').value);
+          const result = SECore.infusionFromFlow(infusionFlows[key], dw, mix.drugMg, volume);
+          $(`${key}FlowDose`).textContent = `${round(result.doseMgKgHr,3)} mg/kg/hr`;
+          $(`${key}DailyFluid`).textContent = `${round(result.dailyVolumeMl,1)} mL/24 hr`;
+          $(`${key}BagDuration`).textContent = formatBagDuration(result.bagHours);
+          errorBox.classList.add('hidden'); input.removeAttribute('aria-invalid');
+        } catch (error) {
+          ['FlowDose','DailyFluid','BagDuration'].forEach(suffix => { $(`${key}${suffix}`).textContent = '—'; });
+          errorBox.textContent = error.message; errorBox.classList.remove('hidden'); input.setAttribute('aria-invalid', 'true');
+        }
+      }
+    }
+    function changeMixMultiplier() {
+      const next = Number($('mixMultiplier').value);
+      for (const key of AUTO_MIX_KEYS) {
+        if (oneTimesFlows[key] == null) continue;
+        try { infusionFlows[key] = String(Number(SECore.flowForMultiplier(oneTimesFlows[key], 1, next).toPrecision(12))); }
+        catch { /* Retain an invalid/blank input so that its error remains visible. */ }
+      }
+      calcSed();
     }
     function usesAutomaticMix(key) { return $('mixtureMode').value === 'auto' && AUTO_MIX_KEYS.includes(key); }
     function mixtureForDrug(key, dw) {
@@ -331,7 +375,7 @@
       const automatic = usesAutomaticMix(keys[0]);
       $('primaryManualMixture').classList.toggle('hidden', automatic);
       $('primaryMixtureLabel').textContent = keys.length ? `${sedatives[keys[0]].label} 혼합액 · ${automatic ? '위에서 선택한 자동 혼합액 사용' : '아래 직접 입력 사용'}` : '약제를 선택하세요';
-      $('rateDoseLabel').textContent = keys.length ? `${sedatives[keys[0]].label} dose (${sedatives[keys[0]].unit})` : 'Rate dose';
+      $('rateDoseLabel').textContent = keys.length ? `${sedatives[keys[0]].label} 추가 환산 용량 (${sedatives[keys[0]].unit})` : '추가 환산 용량';
       $('comparisonMixtures').innerHTML = keys.slice(1).filter(k => !usesAutomaticMix(k)).map(k => {
         const drug = sedatives[k];
         const mix = comparisonMixtures[k] || { mg: '', ml: '' };
@@ -485,7 +529,16 @@
       $('fluidPreset').addEventListener('change', calcSed);
       $('mixMl').addEventListener('input', calcSed);
       $('mixtureMode').addEventListener('change', () => { renderComparisonMixtures(); calcSed(); });
-      ['wt','ht','sex','dosingWeight','baseMixMg','mixMultiplier','rateDose'].forEach(id => $(id).addEventListener('input', calcSed));
+      ['wt','ht','sex','dosingWeight','baseMixMg','rateDose'].forEach(id => $(id).addEventListener('input', calcSed));
+      $('mixMultiplier').addEventListener('input', changeMixMultiplier);
+      $('scaledMixResults').addEventListener('input', event => {
+        const key = event.target.dataset.flowDrug;
+        if (!AUTO_MIX_KEYS.includes(key)) return;
+        infusionFlows[key] = event.target.value;
+        try { oneTimesFlows[key] = SECore.flowForMultiplier(infusionFlows[key], $('mixMultiplier').value, 1); }
+        catch { oneTimesFlows[key] = null; }
+        renderFlowMetrics();
+      });
       $('sedativeChecks').addEventListener('change', () => {
         const oldPrimary = selectedSedatives[0];
         if (oldPrimary) comparisonMixtures[oldPrimary] = { mg: $('mixMg').value, ml: $('mixMl').value };

@@ -5,7 +5,7 @@ test('deployed calculator displays the release and works online and offline', as
   page.on('pageerror', error => errors.push(error.message));
   const response = await page.goto('./');
   expect(response.status()).toBe(200);
-  await expect(page.locator('#appVersion')).toContainText('v0.2.1');
+  await expect(page.locator('#appVersion')).toContainText('v0.3.0');
   await expect(page.locator('#wt')).toHaveValue('');
   await page.locator('#wt').fill('60');
   await expect(page.locator('#ht')).toHaveValue('');
@@ -17,8 +17,18 @@ test('deployed calculator displays the release and works online and offline', as
   await expect(page.locator('#midazolamMixMg')).toHaveText('60 mg');
   await expect(page.locator('#autoRateTable tr[data-drug="midazolam"][data-dose="0.1"]')).toContainText('10 mL/hr');
   await expect(page.locator('#mixEquivalent')).toContainText('10 mL/hr = 0.1 mg/kg/hr');
+  await page.locator('#midazolamFlow').fill('40');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
+  await expect(page.locator('#midazolamBagDuration')).toHaveText('2시간 30분');
   await page.locator('#fluidPreset').selectOption('1000');
   await expect(page.locator('#midazolamMixMg')).toHaveText('600 mg');
+  await expect(page.locator('#midazolamBagDuration')).toHaveText('25시간');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
+  await page.locator('#mixMultiplier').selectOption('2');
+  await expect(page.locator('#midazolamFlow')).toHaveValue('20');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('480 mL/24 hr');
   await page.locator('#mixMultiplier').selectOption('10');
   await expect(page.locator('#midazolamMixMg')).toHaveText('6000 mg');
   await expect(page.locator('#autoRateTable tr[data-drug="midazolam"][data-dose="0.1"]')).toContainText('1 mL/hr');
@@ -38,6 +48,9 @@ test('deployed calculator displays the release and works online and offline', as
   await page.goto('./index.html');
   await page.locator('#wt').fill('60');
   await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
+  await page.locator('#midazolamFlow').fill('40');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
   await page.locator('#wt').fill('0');
   await expect(page.locator('#scaledMixResults')).toBeEmpty();
   await expect(page.locator('#loadOut')).toBeEmpty();
@@ -45,6 +58,6 @@ test('deployed calculator displays the release and works online and offline', as
   fs.mkdirSync('artifacts', { recursive: true });
   await page.screenshot({ path: 'artifacts/deployed-web-phone.png', fullPage: true });
   expect(errors).toEqual([]);
-  fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
-  console.log('Deployed browser checks passed: weight-only mixtures, multiplier, separate shooting, STESS, invalid input and offline navigation.');
+  fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', '40 mL/hr = 0.4 mg/kg/hr and 960 mL/24 hr', '100 mL bag: 2.5 hr; 1 L: 25 hr', '2x preserves 0.4 mg/kg/hr at 20 mL/hr and 480 mL/24 hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
+  console.log('Deployed browser checks passed: weight-only mixtures, flow titration, daily fluid, bag time, dose-preserving multiplier, separate shooting and offline navigation.');
 });

@@ -18,6 +18,7 @@
 | Barbiturates | pentobarbital load 5, thiopental load 3 mg/kg; 0.5–5 mg/kg/hr | 누적 loading regimen과 table 범위, 기관 모니터링 |
 | 체중식 | actual/Devine IBW/Janmahasatian LBW/AdjBW 0.4 | 성별·비만·저체중과 약제별 적절한 체중, 신장 입력 범위는 개발 검증용 제한 |
 | 자동 혼합 농도 | 체중kg × 최종 부피mL /100 × N = 각 약제mg | 사용자가 지정한 1배 정의이며 임상 표준 농도·희석 안정성 승인이 아님. 실제 제제 농도·최종 부피·수액 부하 확인 |
+| 주입속도·수액량 | cc/hr → mg/kg/hr 역산, 현재 속도×24시간, 최종 부피/속도, 배수 변경 시 동일 용량의 속도 환산 | 각 약제 혼합액만 계산. 소진시간은 약제 안정성·실제 허용 교체시간이 아님. 실제 펌프 설정은 별도로 확인 |
 | SeLECT | 0–9, early 3/cortical 2/NIHSS 0–2/LAA 1/MCA 1 | original SeLECT와 SeLECT 2.0을 혼동하지 않을 것. 확률표는 구현하지 않음 |
 | CAVE | 0–4, 원 코호트 근사 위험값 | early seizure 기간·ICH volume cutoff·예측 대상과 기간 명시 |
 | STESS | age ≥65 2/no history 1/type 0–2/stupor or coma 1, 총 0–6 | 기존 coma 2 오류 수정. 원문의 항목 정의·임상 해석 대조 |
@@ -31,6 +32,8 @@
 | Midazolam 0.2 mg/kg/hr ×60 kg, 600 mg/500 mL | 12 mg/hr ÷1.2 mg/mL =10 mL/hr |
 | 자동1배 ×60 kg, 100 mL | 60 mg/100 mL. 10 mL/hr는 0.1 mg/kg/hr |
 | 자동10배 ×60 kg, 500 mL | 3,000 mg/500 mL. 0.1 mg/kg/hr는 1 mL/hr |
+| 60 kg·1배·40 mL/hr | 0.4 mg/kg/hr, 960 mL/24 hr. 100 mL는 2.5시간, 1,000 mL는 25시간에 계산상 소진 |
+| 같은 용량에서 2배 전환 | 20 mL/hr, 0.4 mg/kg/hr 유지, 480 mL/24 hr |
 | Shooting ×60 kg | 기존 Midazolam0.2 mg/kg =12 mg, Ketamine1 mg/kg =60 mg. 혼합 배수와 무관 |
 | Propofol 50 mcg/kg/min ×60 kg, 1000 mg/100 mL | 3 mg/kg/hr ×60 kg ÷10 mg/mL =18 mL/hr |
 | LEV 60 mg/kg ×100 kg, cap4500, 10분 | 4500 mg, 450 mg/min |

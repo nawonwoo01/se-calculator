@@ -48,6 +48,30 @@
     if (![baseMg, drugMg, concentration, doseAt10MlHr].every(v => Number.isFinite(v) && v > 0)) throw new Error('혼합액 입력값이 계산 범위를 초과했습니다.');
     return { baseMg, drugMg, concentration, doseAt10MlHr };
   }
+  function nonnegativeFlow(flowMlHr) {
+    if (flowMlHr === '' || flowMlHr == null || !Number.isFinite(Number(flowMlHr)) || Number(flowMlHr) < 0) throw new Error('주입속도 (mL/hr): 0 이상의 값을 입력하세요.');
+    return Number(flowMlHr);
+  }
+  function infusionFromFlow(flowMlHr, weight, drugMg, volumeMl) {
+    const flow = nonnegativeFlow(flowMlHr);
+    const wt = positive(weight, '투여 체중');
+    const mg = positive(drugMg, '총 약물량 (mg)');
+    const ml = positive(volumeMl, '최종 혼합 부피 (mL)');
+    const doseMgKgHr = flow * mg / ml / wt;
+    const dailyVolumeMl = flow * 24;
+    const bagHours = flow === 0 ? null : ml / flow;
+    if (![doseMgKgHr, dailyVolumeMl].every(Number.isFinite) || (bagHours != null && !Number.isFinite(bagHours))) throw new Error('주입속도 입력값이 계산 범위를 초과했습니다.');
+    return { doseMgKgHr, dailyVolumeMl, bagHours };
+  }
+  function flowForMultiplier(flowMlHr, previousMultiplier, nextMultiplier) {
+    // Compare the same dose at a different concentration; this is a pump-rate calculation.
+    const currentFlow = nonnegativeFlow(flowMlHr);
+    const previous = positive(previousMultiplier, '이전 Mix 배수');
+    const next = positive(nextMultiplier, '새 Mix 배수');
+    const flow = currentFlow * previous / next;
+    if (!Number.isFinite(flow)) throw new Error('주입속도 입력값이 계산 범위를 초과했습니다.');
+    return flow;
+  }
   function loading(dose, kind, weight, cap, minutes) {
     if (!['kg', 'fixed'].includes(kind)) throw new Error('지원하지 않는 투여 방식입니다.');
     const val = positive(dose, '용량');
@@ -88,5 +112,5 @@
     if (config.evidenceText != null && !text(config.evidenceText)) throw new Error('근거 문구를 확인하세요.');
     return config;
   }
-  return { positive, weights, infusion, weightBasedMixture, loading, stess, validateConfig };
+  return { positive, weights, infusion, weightBasedMixture, infusionFromFlow, flowForMultiplier, loading, stess, validateConfig };
 });
