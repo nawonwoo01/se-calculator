@@ -67,7 +67,7 @@ test('existing browser cases remain available after the web update', async ({ pa
   await expect(page.locator('#patientSelect')).toHaveValue('legacy-case');
   await expect(page.locator('#wt')).toHaveValue('60');
   await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
-  await expect(page.locator('#appVersion')).toContainText('v0.2.1');
+  await expect(page.locator('#appVersion')).toContainText('v0.3.0');
 });
 
 test('legacy v8 PWA waits for user action before activating the new cache', async ({ page }) => {
@@ -102,7 +102,7 @@ test('legacy v8 PWA waits for user action before activating the new cache', asyn
     await Promise.all([page.waitForEvent('load'), page.locator('#applyUpdate').click()]);
     await page.waitForFunction(async () => {
       const names = await caches.keys();
-      return names.includes('se-calculator-0.2.1-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
+      return names.includes('se-calculator-0.3.0-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
     });
     await fillPatient(page);
     await expect(page.locator('#rateOut')).toHaveText('10 mL/hr');
@@ -190,4 +190,72 @@ test('a case with weight only saves and reloads without requiring optional field
   await expect(page.locator('#wt')).toHaveValue('60'); await expect(page.locator('#ht')).toHaveValue('');
   await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
+});
+
+test('flow titration, bag size and N-fold concentration have distinct effects', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  await page.locator('#fluidPreset').selectOption('100');
+  const flow = page.locator('#midazolamFlow');
+  await flow.fill(''); await flow.pressSequentially('40');
+  await expect(flow).toBeFocused(); await expect(flow).toHaveValue('40');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
+  await expect(page.locator('#midazolamBagDuration')).toHaveText('2시간 30분');
+  await page.locator('#ketamineFlow').fill('100');
+  await expect(page.locator('#ketamineFlowDose')).toHaveText('1 mg/kg/hr');
+  await page.locator('#fluidPreset').selectOption('1000');
+  await expect(flow).toHaveValue('40');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
+  await expect(page.locator('#midazolamBagDuration')).toHaveText('25시간');
+  await page.locator('#mixMultiplier').selectOption('2');
+  await expect(flow).toHaveValue('20');
+  await expect(page.locator('#ketamineFlow')).toHaveValue('50');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await expect(page.locator('#ketamineFlowDose')).toHaveText('1 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('480 mL/24 hr');
+  await expect(page.locator('#midazolamBagDuration')).toHaveText('50시간');
+  await page.locator('#mixMultiplier').selectOption('3');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
+  await page.locator('#mixMultiplier').selectOption('1');
+  await expect(flow).toHaveValue('40'); await expect(page.locator('#ketamineFlow')).toHaveValue('100');
+  await flow.fill('5'); await expect(page.locator('#midazolamFlowDose')).toHaveText('0.05 mg/kg/hr');
+  await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
+  await expect(page.locator('#ketamineLoadingOut')).toHaveText('60 mg');
+  expect(errors).toEqual([]);
+});
+
+test('invalid or zero flow does not leave stale dose or fluid results', async ({ page }) => {
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  const flow = page.locator('#midazolamFlow');
+  await flow.fill('40');
+  for (const value of ['', '-1', '1e308']) {
+    await flow.fill(value);
+    for (const suffix of ['FlowDose','DailyFluid','BagDuration']) await expect(page.locator('#midazolam' + suffix)).toHaveText('—');
+    await expect(page.locator('#midazolamFlowError')).toBeVisible();
+    await expect(page.locator('#ketamineFlowDose')).toHaveText('0.1 mg/kg/hr');
+    await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
+  }
+  await flow.fill(''); await page.locator('#mixMultiplier').selectOption('2');
+  await expect(flow).toHaveValue(''); await expect(page.locator('#midazolamFlowDose')).toHaveText('—');
+  await flow.fill('0');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0 mg/kg/hr');
+  await expect(page.locator('#midazolamDailyFluid')).toHaveText('0 mL/24 hr');
+  await expect(page.locator('#midazolamBagDuration')).toHaveText('— (0 mL/hr)');
+  await expect(page.locator('#midazolamFlowError')).toBeHidden();
+});
+
+test('a new case clears prior flow and mix planning', async ({ page }) => {
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  await page.locator('#midazolamFlow').fill('40');
+  await page.locator('#ketamineFlow').fill('100');
+  await page.locator('#mixMultiplier').selectOption('2');
+  await page.locator('#caseOptions summary').click(); await page.locator('#newCase').click();
+  await expect(page.locator('#scaledMixResults')).toBeEmpty();
+  await page.locator('#wt').fill('70');
+  await expect(page.locator('#mixMultiplier')).toHaveValue('1');
+  await expect(page.locator('#midazolamFlow')).toHaveValue('10');
+  await expect(page.locator('#ketamineFlow')).toHaveValue('10');
+  await expect(page.locator('#midazolamFlowDose')).toHaveText('0.1 mg/kg/hr');
 });

@@ -59,3 +59,28 @@ test('STESS combinations stay within 0–6; stupor/coma contributes 1', () => {
   for (const age of [false, true]) for (const hx of [false, true]) for (const type of [0, 1, 2]) for (const con of [0, 1]) assert.ok(core.stess(age, hx, type, con) <= 6);
   assert.throws(() => core.stess(true, true, 2, 2));
 });
+test('flow determines delivered dose and daily fluid; bag volume changes depletion time', () => {
+  assert.deepEqual(core.infusionFromFlow(40, 60, 60, 100), { doseMgKgHr: 0.4, dailyVolumeMl: 960, bagHours: 2.5 });
+  assert.deepEqual(core.infusionFromFlow(40, 60, 600, 1000), { doseMgKgHr: 0.4, dailyVolumeMl: 960, bagHours: 25 });
+  assert.deepEqual(core.infusionFromFlow(5, 60, 60, 100), { doseMgKgHr: 0.05, dailyVolumeMl: 120, bagHours: 20 });
+});
+test('increasing mix factor reduces flow and daily fluid at the same dose', () => {
+  for (const factor of [1, 2, 3, 5, 10]) {
+    const flow = core.flowForMultiplier(40, 1, factor);
+    const mix = core.weightBasedMixture(60, 1000, factor);
+    const result = core.infusionFromFlow(flow, 60, mix.drugMg, 1000);
+    assert.ok(Math.abs(result.doseMgKgHr - 0.4) < 1e-12);
+    assert.ok(Math.abs(result.dailyVolumeMl - 960 / factor) < 1e-10);
+    assert.equal(core.flowForMultiplier(flow, factor, 1), 40);
+  }
+});
+test('zero flow has zero dose/volume and no finite bag time; invalid flows are rejected', () => {
+  assert.deepEqual(core.infusionFromFlow(0, 60, 60, 100), { doseMgKgHr: 0, dailyVolumeMl: 0, bagHours: null });
+  assert.equal(core.flowForMultiplier(0, 1, 10), 0);
+  for (const value of ['', null, -1, NaN, Infinity, 'abc']) {
+    assert.throws(() => core.infusionFromFlow(value, 60, 60, 100));
+    assert.throws(() => core.flowForMultiplier(value, 1, 2));
+  }
+  assert.throws(() => core.infusionFromFlow(1e308, 60, 60, 100));
+  assert.throws(() => core.flowForMultiplier(40, 1, 0));
+});
