@@ -14,7 +14,7 @@
   <header>
     <div class="title">
       <h1>SE ASM/Sedative Calculator</h1>
-      <span class="meta" id="appVersion">v0.2.0 · 임상 검토 전 · 웹 업데이트 2026-10-22</span>
+      <span class="meta" id="appVersion">v0.2.1 · 임상 검토 전 · 웹 업데이트 2026-10-22</span>
     </div>
   </header>
   <main>
@@ -73,7 +73,7 @@
       </div>
       <div class="panel auto-mix-panel">
         <h2>2. 1배 mix · 수액 용량별 약물량</h2>
-        <p class="small">이 계산기의 1배 정의: <b>투여 체중 1 kg당 약물 1 mg / 최종 혼합액 1,000 mL</b>. 수액 용량에 비례해 약물량을 계산합니다. 각 약제는 별도로 혼합하며, 두 약제를 한 수액에 함께 넣는 표가 아닙니다.</p>
+        <p class="small">이 계산기의 1배 정의: <b>투여 체중 1 kg당 약물 1 mg / 최종 혼합액 100 mL</b>. 수액 용량에 비례해 약물량을 계산합니다. 각 약제는 별도로 혼합하며, 두 약제를 한 수액에 함께 넣는 표가 아닙니다.</p>
         <p id="autoMixWeight" class="small"></p>
         <div id="autoMixError" class="note danger hidden" role="status"></div>
         <div id="oneMixTable"></div>
@@ -230,7 +230,7 @@
           <thead><tr><th>Formula</th><th>Definition</th></tr></thead>
           <tbody>
             <tr><td>concentration</td><td>total drug mg / total volume mL</td></tr>
-            <tr><td>자동 1배 / N배 mix</td><td>각 약제 mg = 투여 체중 kg × 최종 혼합 부피 mL /1000 × N. 이번 계산기의 체중kg : 1 L당 약물mg = 1:1 정의이며 처방 기준이 아님. 1배에서 10 mL/hr =0.01 mg/kg/hr.</td></tr>
+            <tr><td>자동 1배 / N배 mix</td><td>각 약제 mg = 투여 체중 kg × 최종 혼합 부피 mL /100 × N. 이번 계산기의 체중kg : 100 mL당 약물mg = 1:1 정의이며 처방 기준이 아님. 1배에서 10 mL/hr =0.1 mg/kg/hr.</td></tr>
             <tr><td>mL/hr</td><td>mg/kg/hr * dosing weight kg / concentration mg/mL</td></tr>
             <tr><td>mg/kg/hr equivalent</td><td>공통 계산 단위. Propofol은 mcg/kg/min * 0.06 = mg/kg/hr로 환산.</td></tr>
             <tr><td>loading</td><td>min(mg/kg * dosing weight, max dose)</td></tr>
@@ -280,7 +280,7 @@
         <p>뇌전증지속증 관련 ASM loading, sedative infusion과 SeLECT·CAVE·STESS 점수를 확인하는 의료전문가용 성인 계산 보조 도구입니다. 진단·처방을 대신하지 않습니다.</p>
         <p>최종 투여량은 기관 프로토콜과 실제 약품 농도로 확인하세요. 신장·간 기능, 임신 가능성, ECG/BP/airway/EEG monitoring 여부를 별도로 평가해야 합니다.</p>
         <p><a href="privacy.html">개인정보 처리방침</a> · <a href="support.html">지원 및 오류 제보</a></p>
-        <p class="small">웹 버전 0.2.0 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
+        <p class="small">웹 버전 0.2.1 · 임상 검토 전 계산 보조 초안입니다. 실제 투여 전 원문과 기관 프로토콜을 확인하세요.</p>
         <p class="small">개발·운영: Wonwoo Lee. 저자 소속 표기와 별개로 기관의 공식 배포·임상 승인 여부는 확인되지 않았습니다.</p>
       </div>
     </section>

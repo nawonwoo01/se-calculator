@@ -66,8 +66,8 @@ test('existing browser cases remain available after the web update', async ({ pa
   await page.goto('/');
   await expect(page.locator('#patientSelect')).toHaveValue('legacy-case');
   await expect(page.locator('#wt')).toHaveValue('60');
-  await expect(page.locator('#rateOut')).toHaveText('200 mL/hr');
-  await expect(page.locator('#appVersion')).toContainText('v0.2.0');
+  await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
+  await expect(page.locator('#appVersion')).toContainText('v0.2.1');
 });
 
 test('legacy v8 PWA waits for user action before activating the new cache', async ({ page }) => {
@@ -102,7 +102,7 @@ test('legacy v8 PWA waits for user action before activating the new cache', asyn
     await Promise.all([page.waitForEvent('load'), page.locator('#applyUpdate').click()]);
     await page.waitForFunction(async () => {
       const names = await caches.keys();
-      return names.includes('se-calculator-0.2.0-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
+      return names.includes('se-calculator-0.2.1-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
     });
     await fillPatient(page);
     await expect(page.locator('#rateOut')).toHaveText('10 mL/hr');
@@ -120,30 +120,30 @@ test('weight alone displays all 1x fluid recipes, scaled mixtures, rates and sep
   await expect(page.locator('#scaledMixResults')).toBeEmpty();
   await page.locator('#wt').fill('60');
   await expect(page.locator('#ht')).toHaveValue('');
-  for (const [volume, mg] of [[100,6],[250,15],[500,30],[1000,60]]) {
+  for (const [volume, mg] of [[100,60],[250,150],[500,300],[1000,600]]) {
     const row = page.locator(`#oneMixTable tr[data-volume="${volume}"]`);
     await expect(row.locator('td')).toHaveText([`${mg} mg`, `${mg} mg`]);
   }
-  await expect(page.locator('#midazolamMixMg')).toHaveText('30 mg');
-  await expect(page.locator('#ketamineMixMg')).toHaveText('30 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
+  await expect(page.locator('#ketamineMixMg')).toHaveText('300 mg');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
   await expect(page.locator('#ketamineLoadingOut')).toHaveText('60 mg');
   const midaz01 = page.locator('#autoRateTable tr[data-drug="midazolam"][data-dose="0.1"]');
-  await expect(midaz01).toContainText('100 mL/hr');
+  await expect(midaz01).toContainText('10 mL/hr');
   await page.locator('#fluidPreset').selectOption('1000');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('60 mg');
-  await expect(midaz01).toContainText('100 mL/hr');
-  await page.locator('#mixMultiplier').selectOption('10');
   await expect(page.locator('#midazolamMixMg')).toHaveText('600 mg');
   await expect(midaz01).toContainText('10 mL/hr');
-  await expect(page.locator('#mixEquivalent')).toContainText('10 mL/hr = 0.1 mg/kg/hr');
+  await page.locator('#mixMultiplier').selectOption('10');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('6000 mg');
+  await expect(midaz01).toContainText('1 mL/hr');
+  await expect(page.locator('#mixEquivalent')).toContainText('10 mL/hr = 1 mg/kg/hr');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
   await page.locator('#fluidPreset').selectOption('250');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('150 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('1500 mg');
   await page.locator('#wt').fill('70');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('175 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('1750 mg');
   await expect(page.locator('#ketamineLoadingOut')).toHaveText('70 mg');
-  await expect(midaz01).toContainText('10 mL/hr');
+  await expect(midaz01).toContainText('1 mL/hr');
   await expect(page.locator('#infusionOptions')).not.toHaveAttribute('open', '');
   expect(errors).toEqual([]);
 });
@@ -152,7 +152,7 @@ test('optional height cannot block actual-weight results; selecting derived weig
   await page.goto('/'); await page.locator('#wt').fill('60');
   await page.locator('#bodyOptions summary').click();
   await page.locator('#ht').fill('0');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('30 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
   await page.locator('#ht').fill(''); await page.locator('#dosingWeight').selectOption('ibw');
   await expect(page.locator('#scaledMixResults')).toBeEmpty();
@@ -165,7 +165,7 @@ test('optional height cannot block actual-weight results; selecting derived weig
   await page.locator('#ht').fill('');
   await expect(page.locator('#scaledMixResults')).toBeEmpty();
   await page.locator('#dosingWeight').selectOption('actual');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('30 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
 });
 
 test('invalid weight clears every weight-derived result; an invalid manual mixture leaves shooting independent', async ({ page }) => {
@@ -173,7 +173,7 @@ test('invalid weight clears every weight-derived result; an invalid manual mixtu
   await page.locator('#mixMl').fill('0');
   await expect(page.locator('#rateOut')).toHaveText('—');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('30 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
   for (const value of ['', '0', '-1', '501']) {
     await page.locator('#wt').fill(value);
     for (const id of ['oneMixTable','scaledMixResults','autoRateTable','loadOut']) await expect(page.locator('#' + id)).toBeEmpty();
@@ -188,6 +188,6 @@ test('a case with weight only saves and reloads without requiring optional field
   await expect(page.locator('#caseStatus')).toContainText('저장했습니다');
   await page.reload();
   await expect(page.locator('#wt')).toHaveValue('60'); await expect(page.locator('#ht')).toHaveValue('');
-  await expect(page.locator('#midazolamMixMg')).toHaveText('30 mg');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
 });
