@@ -5,7 +5,7 @@ test('deployed calculator displays the release and works online and offline', as
   page.on('pageerror', error => errors.push(error.message));
   const response = await page.goto('./');
   expect(response.status()).toBe(200);
-  await expect(page.locator('#appVersion')).toContainText('v0.4.0');
+  await expect(page.locator('#appVersion')).toContainText('v0.5.0');
   await expect(page.locator('#wt')).toHaveValue('');
   await page.locator('#wt').fill('60');
   await expect(page.locator('#ht')).toHaveValue('');
@@ -13,10 +13,24 @@ test('deployed calculator displays the release and works online and offline', as
   await expect(page.locator('#flowOverviewTable')).toBeVisible();
   await expect(page.locator('#flowOverviewTable tr[data-flow="40"] td')).toHaveText(['0.4','0.4']);
   await page.locator('#sedativeChecks input[value="propofol"]').check();
-  await page.locator('#compare_propofol_mg').fill('1000'); await page.locator('#compare_propofol_ml').fill('100');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('1000 mg / 100 mL');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('7.2 mL/hr');
+  await page.locator('#evidence_propofol').selectOption('sop2022');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('24 mL/hr');
   await expect(page.locator('#flowOverviewTable tr[data-flow="30"] td[data-drug="propofol"] .native-dose')).toHaveText('83.33 mcg/kg/min');
   await expect(page.locator('#propofolLoadingOut')).toHaveText('120 mg');
-  await page.locator('#sedativeChecks input[value="propofol"]').uncheck();
+  for (const [key,text] of [['pentobarbital','0.6 mL/hr'],['thiopental','15 mL/hr']]) {
+    await page.locator(`#sedativeChecks input[value="${key}"]`).check();
+    await expect(page.locator(`#evidenceResult_${key}`)).toContainText(text);
+    await expect(page.locator(`#compare_${key}_mg`)).toHaveCount(0);
+  }
+  await page.locator('#evidence_thiopental').selectOption('sop2022');
+  await expect(page.locator('#thiopentalLoadingOut')).toHaveText('300 mg');
+  await expect(page.locator('#evidenceResult_thiopental')).toContainText('90 mL/hr');
+  await page.locator('[data-tab="refs"]').click();
+  await expect(page.locator('#evidenceHistory')).toContainText('2026-10-22');
+  await page.locator('[data-tab="sedation"]').click();
+  for (const key of ['propofol','pentobarbital','thiopental']) await page.locator(`#sedativeChecks input[value="${key}"]`).uncheck();
   await expect(page.locator('#oneMixTable tr[data-volume="100"] td')).toHaveText(['60 mg', '60 mg']);
   await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
   await expect(page.locator('#midazolamLoadingOut')).toHaveText('12 mg');
@@ -66,6 +80,9 @@ test('deployed calculator displays the release and works online and offline', as
   await page.locator('#midazolamFlow').fill('40');
   await expect(page.locator('#midazolamFlowDose')).toHaveText('0.4 mg/kg/hr');
   await expect(page.locator('#midazolamDailyFluid')).toHaveText('960 mL/24 hr');
+  await page.locator('#sedativeChecks input[value="propofol"]').check();
+  await page.locator('#evidence_propofol').selectOption('sop2022');
+  await expect(page.locator('#evidenceResult_propofol')).toContainText('24 mL/hr');
   await page.locator('#wt').fill('0');
   await expect(page.locator('#scaledMixResults')).toBeEmpty();
   await expect(page.locator('#loadOut')).toBeEmpty();
@@ -73,6 +90,6 @@ test('deployed calculator displays the release and works online and offline', as
   fs.mkdirSync('artifacts', { recursive: true });
   await page.screenshot({ path: 'artifacts/deployed-web-phone.png', fullPage: true });
   expect(errors).toEqual([]);
-  fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['visible full flow overview', 'ASM-specific warning flags without dose change', 'weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', '40 mL/hr = 0.4 mg/kg/hr and 960 mL/24 hr', '100 mL bag: 2.5 hr; 1 L: 25 hr', '2x preserves 0.4 mg/kg/hr at 20 mL/hr and 480 mL/24 hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
-  console.log('Deployed browser checks passed: visible full flow overview, integrated ASM warning flags, weight-only mixtures, flow titration, daily fluid, bag time, dose-preserving multiplier, separate shooting and offline navigation.');
+  fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['three automatic product preparations', 'source-native dose and loading selection', 'dated evidence history and offline evidence data', 'visible full flow overview', 'ASM-specific warning flags without dose change', 'weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', '40 mL/hr = 0.4 mg/kg/hr and 960 mL/24 hr', '100 mL bag: 2.5 hr; 1 L: 25 hr', '2x preserves 0.4 mg/kg/hr at 20 mL/hr and 480 mL/24 hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
+  console.log('Deployed browser checks passed: automatic evidence doses for all three sedatives, source-native units, dated history, visible full flow overview, integrated ASM warning flags, weight-only mixtures, flow titration, daily fluid, bag time, dose-preserving multiplier, separate shooting and offline navigation.');
 });

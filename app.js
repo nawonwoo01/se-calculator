@@ -62,6 +62,68 @@
         '선택 항목에 대해 이 약제에 자동 연결된 주의 표시가 없습니다. 금기·안전성이 확인되었다는 뜻은 아니며 약제 설명과 기관 프로토콜을 확인하세요.';
     }
     const defaultConfig = JSON.parse(JSON.stringify({ sedatives, asms, warningItems, evidenceText }));
+    const evidenceSelections = {};
+    function evidenceSelection(key) {
+      const profiles = SEEvidence.profiles[key];
+      if (!profiles) return null;
+      if (!evidenceSelections[key]) {
+        const p = profiles[0], prep = SEEvidence.preparations[key];
+        evidenceSelections[key] = { profile: p.id, dose: p.defaultDose, load: p.defaultLoad, concentration: prep.concentrations[0], volume: prep.defaultVolume };
+      }
+      return evidenceSelections[key];
+    }
+    function selectedEvidence(key) {
+      const selection = evidenceSelection(key);
+      return selection && SEEvidence.profiles[key].find(p => p.id === selection.profile);
+    }
+    function effectiveSedative(key) {
+      const drug = sedatives[key], p = selectedEvidence(key);
+      if (!p || $('mixtureMode').value !== 'auto') return drug;
+      return { ...drug, load: evidenceSelection(key).load, unit: p.unit, quick: p.doses,
+        range: `${p.min}–${p.max} ${p.unit}${p.startDose ? ` · 시작 ${p.startDose}` : ''} (${SEEvidence.sources[p.source].label})`,
+        table: { min: p.min, max: p.max, step: p.step }, notes: `${p.note} ${drug.notes}` };
+    }
+    function mixtureFactor(key) { return usesAutomaticMix(key) && SEEvidence.preparations[key] ? 1 : Number($('mixMultiplier').value); }
+    function renderEvidenceControls() {
+      const automatic = $('mixtureMode').value === 'auto';
+      $('evidenceControls').classList.toggle('hidden', !automatic);
+      $('evidenceControls').innerHTML = automatic ? selectedSedatives.filter(key => SEEvidence.profiles[key]).map(key => {
+        const state = evidenceSelection(key), p = selectedEvidence(key), prep = SEEvidence.preparations[key];
+        const source = SEEvidence.sources[p.source], prepSource = SEEvidence.sources[prep.source];
+        const options = (values, selected, label) => values.map(v => `<option value="${v}" ${v === selected ? 'selected' : ''}>${escapeHtml(label(v))}</option>`).join('');
+        return `<div class="drug-note evidence-drug" data-evidence-drug="${key}"><h3>${escapeHtml(sedatives[key].label)} · 근거별 자동 계산</h3>
+          <div class="field"><label for="evidence_${key}">투여 용량 근거</label><select id="evidence_${key}" data-evidence-key="${key}" data-evidence-field="profile">${SEEvidence.profiles[key].map(profile => `<option value="${profile.id}" ${profile.id === state.profile ? 'selected' : ''}>${profile.min}–${profile.max} ${profile.unit}_(${SEEvidence.sources[profile.source].label})</option>`).join('')}</select></div>
+          <div class="row">
+            <div class="field"><label for="evidenceDose_${key}">지속주입 용량 선택</label><select id="evidenceDose_${key}" data-evidence-key="${key}" data-evidence-field="dose">${options(p.doses,state.dose,v => `${v} ${p.unit}_(${source.label}${v === p.startDose ? '·시작' : '·범위 내 선택'})`)}</select></div>
+            <div class="field"><label for="evidenceLoad_${key}">Shooting · 단회 loading 선택</label><select id="evidenceLoad_${key}" data-evidence-key="${key}" data-evidence-field="load">${options(p.loads,state.load,v => `${v} mg/kg_(${source.label})`)}</select></div>
+          </div>
+          <p class="small">${escapeHtml(p.note)} <a href="${source.url}" target="_blank" rel="noopener noreferrer">용량 원문</a></p>
+          <div class="row">
+            <div class="field"><label for="evidenceConcentration_${key}">제제·희석 농도 선택</label><select id="evidenceConcentration_${key}" data-evidence-key="${key}" data-evidence-field="concentration">${options(prep.concentrations,state.concentration,v => `${v} mg/mL_(${prepSource.label})`)}</select></div>
+            <div class="field"><label for="evidenceVolume_${key}">${key === 'thiopental' ? '조제 최종 부피' : '완제품 용량'}</label><select id="evidenceVolume_${key}" data-evidence-key="${key}" data-evidence-field="volume">${options(prep.volumes,state.volume,v => `${v} mL`)}</select></div>
+          </div>
+          <p class="small">${escapeHtml(prep.note)} <a href="${prepSource.url}" target="_blank" rel="noopener noreferrer">농도 원문</a></p>
+          <div id="evidenceResult_${key}" class="note" role="status" aria-live="polite"></div>
+        </div>`;
+      }).join('') : '';
+    }
+    function renderEvidenceMetrics() {
+      for (const key of selectedSedatives) {
+        const box = $(`evidenceResult_${key}`);
+        if (!box) continue;
+        try {
+          const dw = selectedWeight('dosingWeight'), p = selectedEvidence(key), state = evidenceSelection(key);
+          if (!p.doses.includes(state.dose) || !p.loads.includes(state.load)) throw new Error('근거별 용량을 다시 선택하세요.');
+          const mix = mixtureForDrug(key, dw), rate = SECore.infusion(state.dose,p.unit,dw,mix.mg,mix.ml);
+          box.textContent = `${round(+mix.mg,2)} mg / ${mix.ml} mL · ${round(rate.concentration,3)} mg/mL → 선택 용량 ${state.dose} ${p.unit}: ${round(rate.mlHr,2)} mL/hr · ${round(rate.mgKgHr * dw,2)} mg/hr`;
+          box.classList.remove('danger');
+        } catch (error) { box.textContent = error.message; box.classList.add('danger'); }
+      }
+    }
+    function renderEvidenceReferences() {
+      $('evidenceHistory').innerHTML = `<div class="table-wrap"><table><thead><tr><th>검토일 / 약제</th><th>이전</th><th>선택지 / 변경</th><th>변경 고려사항</th></tr></thead><tbody>${SEEvidence.history.map(item => `<tr><th>${item.date}<br>${escapeHtml(item.drug)}</th><td>${escapeHtml(item.before)}</td><td>${escapeHtml(item.after)}</td><td>${escapeHtml(item.considerations)}<br>${item.sources.map(id => `<a href="${SEEvidence.sources[id].url}" target="_blank" rel="noopener noreferrer">${escapeHtml(SEEvidence.sources[id].label)}</a>`).join(' · ')}</td></tr>`).join('')}</tbody></table></div>`;
+      $('evidenceSources').innerHTML = Object.entries(SEEvidence.sources).map(([id,source]) => `<div class="drug-note" id="ref_${id}"><b><a href="${source.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title)}</a></b><p class="small">발표/개정: ${source.published} · 원문 대조일: ${source.reviewedAt} · 기관 임상 검토 전</p>${escapeHtml(source.scope)}</div>`).join('');
+    }
     function loadConfig() {
       if (nativeApp) return;
       try {
@@ -167,6 +229,9 @@
       $('mixtureMode').value = 'auto';
       Object.keys(sedatives).forEach(key => { infusionFlows[key] = '10'; oneTimesFlows[key] = 10; });
       Object.keys(comparisonMixtures).forEach(k => delete comparisonMixtures[k]);
+      Object.keys(evidenceSelections).forEach(k => delete evidenceSelections[k]);
+      renderEvidenceControls();
+      if (SEEvidence.profiles[selectedSedatives[0]]) $('rateDose').value = effectiveSedative(selectedSedatives[0]).quick[0];
       renderComparisonMixtures();
       document.querySelectorAll('#warningChecks input,#scores input').forEach(el => { el.checked = false; });
       document.querySelectorAll('#scores select').forEach(el => { el.selectedIndex = 0; });
@@ -285,10 +350,10 @@
       const modeLabel = { actual: '실제 체중', ibw: 'IBW', lbw: 'LBW', adj: 'AdjBW' }[$('dosingWeight').value];
       $('loadingWeight').textContent = `계산 체중: ${modeLabel} ${round(dw,1)} kg`;
       $('loadOut').innerHTML = selectedSedatives.map(key => {
-        const drug = sedatives[key];
+        const drug = effectiveSedative(key);
         if (!drug) return `<div class="metric"><div class="k">${key === 'midazolam' ? 'Midazolam' : 'Ketamine'}</div><p class="small">현재 설정에 약제가 없습니다.</p></div>`;
         const dose = Number(drug.load) * dw;
-        return `<div class="metric"><div class="k">${escapeHtml(drug.label)} · IV loading</div><div class="v" id="${key}LoadingOut">${round(dose,1)} mg</div><p class="small">${escapeHtml(drug.load)} mg/kg × ${round(dw,1)} kg</p></div>`;
+        return `<div class="metric"><div class="k">${escapeHtml(drug.label)} · IV loading</div><div class="v" id="${key}LoadingOut">${round(dose,1)} mg</div><p class="small">${escapeHtml(drug.load)} mg/kg × ${round(dw,1)} kg${usesAutomaticMix(key) && selectedEvidence(key) ? ` · ${escapeHtml(SEEvidence.sources[selectedEvidence(key).source].label)}` : ''}</p></div>`;
       }).join('');
     }
     function calcAutoMixtures() {
@@ -297,9 +362,9 @@
         const keys = selectedSedatives.filter(key => sedatives[key]);
         if (!keys.length) throw new Error('계산할 약제를 선택하세요.');
         const multiplier = SECore.positive($('mixMultiplier').value, 'Mix 배수');
-        const automaticKeys = keys.filter(usesAutomaticMix);
+        const automaticKeys = keys.filter(key => usesAutomaticMix(key) && AUTO_MIX_KEYS.includes(key));
         const weightLabel = { actual: '실제 체중', ibw: 'IBW', lbw: 'LBW', adj: 'AdjBW' }[$('dosingWeight').value];
-        $('autoMixWeight').textContent = `계산 체중: ${weightLabel} ${round(dw,1)} kg · ${multiplier}배`;
+        $('autoMixWeight').textContent = `계산 체중: ${weightLabel} ${round(dw,1)} kg · ${$('mixtureMode').value === 'auto' ? 'MDZ/Ket ' : ''}${multiplier}배`;
         $('autoMixError').classList.add('hidden');
         const recipeKeys = keys.filter(key => AUTO_MIX_KEYS.includes(key));
         $('oneMixTable').innerHTML = recipeKeys.length ? `<div class="compact-table"><table><thead><tr><th>최종 부피</th>${recipeKeys.map(key => `<th>${escapeHtml(sedatives[key].label)}</th>`).join('')}</tr></thead><tbody>${[100,250,500,1000].map(ml => {
@@ -307,11 +372,11 @@
           return `<tr data-volume="${ml}"><th>${ml} mL</th>${recipeKeys.map(() => `<td>${round(mg,2)} mg</td>`).join('')}</tr>`;
         }).join('')}</tbody></table></div>` : '<p class="small">이 자동 1배 정의는 Midazolam·Ketamine에 적용됩니다.</p>';
         $('mixtureSummary').innerHTML = keys.map(key => {
-          const drug = sedatives[key];
+          const drug = effectiveSedative(key);
           try {
             const mix = mixtureForDrug(key, dw);
             SECore.infusionFromFlow(0, dw, mix?.mg, mix?.ml);
-            return `<div class="metric"><b>${escapeHtml(drug.label)}</b><div>${round(+mix.mg,2)} mg / ${round(+mix.ml,1)} mL</div><p class="small">${round(+mix.mg / +mix.ml,3)} mg/mL · ${multiplier}배 · ${usesAutomaticMix(key) ? '체중 기준 자동' : '약제별 입력 기준'}</p></div>`;
+            return `<div class="metric"><b>${escapeHtml(drug.label)}</b><div>${round(+mix.mg,2)} mg / ${round(+mix.ml,1)} mL</div><p class="small">${round(+mix.mg / +mix.ml,3)} mg/mL · ${usesAutomaticMix(key) && SEEvidence.preparations[key] ? '선택 농도 고정' : mixtureFactor(key) + '배'} · ${usesAutomaticMix(key) ? (SEEvidence.preparations[key] ? '제제·희석 기준 자동' : '체중 기준 자동') : '약제별 입력 기준'}</p></div>`;
           } catch { return `<div class="metric"><b>${escapeHtml(drug.label)}</b><p class="flow-error">혼합액 입력 필요 · 위에서 실제 농도를 확인해 입력하세요.</p></div>`; }
         }).join('');
         $('scaledMixResults').innerHTML = keys.map(key => {
@@ -323,7 +388,7 @@
             amount = `${round(+mix.mg,2)} mg`;
             description = `최종 ${round(+mix.ml,1)} mL · ${round(+mix.mg / +mix.ml,3)} mg/mL`;
           } catch { /* Keep the flow field available while the mixture is being entered. */ }
-          return `<div class="metric"><div class="k">${escapeHtml(sedatives[key].label)} · ${multiplier}배</div><div class="v" id="${key}MixMg">${amount}</div><p class="small">${description}</p>
+          return `<div class="metric"><div class="k">${escapeHtml(sedatives[key].label)} · ${usesAutomaticMix(key) && SEEvidence.preparations[key] ? '선택 농도' : mixtureFactor(key) + '배'}</div><div class="v" id="${key}MixMg">${amount}</div><p class="small">${description}</p>
             <div class="field flow-input"><label for="${key}Flow">${escapeHtml(sedatives[key].label)} 주입속도 · cc/hr (=mL/hr)</label><input id="${key}Flow" type="number" min="0" step="any" inputmode="decimal" data-flow-drug="${key}" value="${escapeHtml(infusionFlows[key])}"></div>
             <div id="${key}FlowError" class="small flow-error hidden" role="status"></div>
             <dl class="flow-metrics" aria-live="polite"><dt>환산 투여량</dt><dd id="${key}FlowDose">—</dd><dt>24시간 수액량</dt><dd id="${key}DailyFluid">—</dd><dt>계산상 수액 소진시간</dt><dd id="${key}BagDuration">—</dd></dl>
@@ -343,18 +408,18 @@
       // Show all flow rows without requiring a single-flow or target-dose input.
       const flows = [1,2,2.5,5,7.5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,125,150,175,200,225,250];
       const cells = flow => keys.map(key => {
-        const drug = sedatives[key];
+        const drug = effectiveSedative(key);
         try {
           const mix = mixtureForDrug(key, dw);
           const dose = SECore.infusionFromFlow(flow, dw, mix?.mg, mix?.ml).doseMgKgHr;
           const nativeDose = drug.unit === 'mcg/kg/min' ? dose / 0.06 : dose;
           const outside = nativeDose < drug.table.min || nativeDose > drug.table.max;
-          return `<td data-drug="${key}" class="${outside ? 'dose-outside' : ''}"${outside ? ' title="기존 설정 표시 범위 밖 · 투여 권고 아님"' : ''}>${round(dose,3)}${drug.unit === 'mcg/kg/min' ? `<span class="native-dose">${round(nativeDose,2)} mcg/kg/min</span>` : ''}</td>`;
+          return `<td data-drug="${key}" class="${outside ? 'dose-outside' : ''}"${outside ? ' title="선택 기준 표시 범위 밖 · 투여 권고 아님"' : ''}>${round(dose,3)}${key === 'propofol' ? `<span class="native-dose">${round(dose / 0.06,2)} mcg/kg/min</span>` : ''}</td>`;
         } catch { return `<td data-drug="${key}" class="small">혼합액 입력 필요</td>`; }
       }).join('');
-      $('flowOverviewTable').innerHTML = `<div class="table-wrap flow-overview" tabindex="0" role="region" aria-label="주입속도별 전체 투여량 표"><table><thead><tr><th scope="col">cc/hr<br><span class="small">=mL/hr</span></th>${keys.map(key => `<th scope="col">${escapeHtml(sedatives[key].label)}<span class="native-dose">mg/kg/hr</span></th>`).join('')}</tr></thead><tbody>${flows.map(flow => `<tr data-flow="${flow}"><th scope="row">${flow}</th>${cells(flow)}</tr>`).join('')}</tbody></table></div><p class="small">연한 회색 셀은 기존 설정의 표시 범위 밖입니다. 모든 셀은 계산값이며 투여 권고가 아닙니다.</p>`;
+      $('flowOverviewTable').innerHTML = `<div class="table-wrap flow-overview" tabindex="0" role="region" aria-label="주입속도별 전체 투여량 표"><table><thead><tr><th scope="col">cc/hr<br><span class="small">=mL/hr</span></th>${keys.map(key => `<th scope="col">${escapeHtml(sedatives[key].label)}<span class="native-dose">mg/kg/hr</span>${usesAutomaticMix(key) && selectedEvidence(key) ? `<span class="native-dose">${escapeHtml(SEEvidence.sources[selectedEvidence(key).source].label)}</span>` : ''}</th>`).join('')}</tr></thead><tbody>${flows.map(flow => `<tr data-flow="${flow}"><th scope="row">${flow}</th>${cells(flow)}</tr>`).join('')}</tbody></table></div><p class="small">연한 회색 셀은 선택 기준의 표시 범위 밖입니다. 모든 셀은 계산값이며 투여 권고가 아닙니다.</p>`;
       const rows = keys.flatMap(key => {
-        const drug = sedatives[key];
+        const drug = effectiveSedative(key);
         return tableDoses(drug).map(dose => {
           let flow = '혼합액 입력 필요', concentration = '—';
           try {
@@ -383,7 +448,7 @@
           const dw = selectedWeight('dosingWeight');
           const mix = mixtureForDrug(key, dw);
           const result = SECore.infusionFromFlow(infusionFlows[key], dw, mix?.mg, mix?.ml);
-          $(`${key}FlowDose`).textContent = `${round(result.doseMgKgHr,3)} mg/kg/hr${sedatives[key].unit === 'mcg/kg/min' ? ` · ${round(result.doseMgKgHr / 0.06,2)} mcg/kg/min` : ''}`;
+          $(`${key}FlowDose`).textContent = `${round(result.doseMgKgHr,3)} mg/kg/hr${key === 'propofol' ? ` · ${round(result.doseMgKgHr / 0.06,2)} mcg/kg/min` : ''}`;
           $(`${key}DailyFluid`).textContent = `${round(result.dailyVolumeMl,1)} mL/24 hr`;
           $(`${key}BagDuration`).textContent = formatBagDuration(result.bagHours);
           errorBox.classList.add('hidden'); input.removeAttribute('aria-invalid');
@@ -396,14 +461,19 @@
     function changeMixMultiplier() {
       const next = Number($('mixMultiplier').value);
       for (const key of Object.keys(infusionFlows)) {
-        if (oneTimesFlows[key] == null) continue;
+        if (oneTimesFlows[key] == null || (usesAutomaticMix(key) && SEEvidence.preparations[key])) continue;
         try { infusionFlows[key] = String(Number(SECore.flowForMultiplier(oneTimesFlows[key], 1, next).toPrecision(12))); }
         catch { /* Retain an invalid/blank input so that its error remains visible. */ }
       }
       calcSed();
     }
-    function usesAutomaticMix(key) { return $('mixtureMode').value === 'auto' && AUTO_MIX_KEYS.includes(key); }
+    function usesAutomaticMix(key) { return $('mixtureMode').value === 'auto' && (AUTO_MIX_KEYS.includes(key) || Object.hasOwn(SEEvidence.preparations,key)); }
     function mixtureForDrug(key, dw) {
+      if (usesAutomaticMix(key) && SEEvidence.preparations[key]) {
+        const state = evidenceSelection(key), prep = SEEvidence.preparations[key];
+        if (!prep.concentrations.includes(state.concentration) || !prep.volumes.includes(state.volume)) throw new Error('제제·희석 기준을 다시 선택하세요.');
+        return SECore.fixedMixture(state.concentration,state.volume);
+      }
       if (usesAutomaticMix(key)) {
         const ml = SECore.positive($('fluidPreset').value, '최종 혼합 부피');
         return { mg: SECore.weightBasedMixture(dw, ml, $('mixMultiplier').value).drugMg, ml };
@@ -417,7 +487,7 @@
       if (usesAutomaticMix(selectedSedatives[0])) {
         try {
           const mix = mixtureForDrug(selectedSedatives[0], selectedWeight('dosingWeight'));
-          $('baseMixMg').value = mix.mg / +$('mixMultiplier').value;
+          $('baseMixMg').value = mix.mg / mixtureFactor(selectedSedatives[0]);
           $('mixMg').value = mix.mg; $('mixMl').value = mix.ml;
         } catch { $('baseMixMg').value = ''; $('mixMg').value = ''; }
         return;
@@ -438,7 +508,7 @@
       $('sedativeChecks').innerHTML = Object.entries(sedatives).map(([k,v]) => `<label class="drug-chip" style="border-left-color:${v.color || '#1f6fb7'}"><input type="checkbox" value="${k}" ${selectedSedatives.includes(k) ? 'checked' : ''}> ${escapeHtml(v.label)}</label>`).join('');
       $('asmDrug').innerHTML = Object.entries(asms).map(([k,v]) => `<option value="${k}">${escapeHtml(v.label)}</option>`).join('');
       $('warningChecks').innerHTML = warningItems.map(([id,label]) => `<label class="check"><input id="warn_${id}" type="checkbox"> ${escapeHtml(label)}</label>`).join('');
-      renderComparisonMixtures();
+      renderComparisonMixtures(); renderEvidenceControls(); renderEvidenceReferences();
     }
     function renderComparisonMixtures() {
       const keys = selectedSedatives.filter(k => sedatives[k]);
@@ -446,9 +516,9 @@
       $('primaryManualMixture').classList.toggle('hidden', automatic);
       $('primaryMixtureLabel').classList.toggle('hidden', automatic);
       $('primaryMixtureLabel').textContent = keys.length ? `${sedatives[keys[0]].label} 혼합액 · ${automatic ? '위에서 선택한 자동 혼합액 사용' : '아래 직접 입력 사용'}` : '약제를 선택하세요';
-      $('rateDoseLabel').textContent = keys.length ? `${sedatives[keys[0]].label} 추가 환산 용량 (${sedatives[keys[0]].unit})` : '추가 환산 용량';
+      $('rateDoseLabel').textContent = keys.length ? `${sedatives[keys[0]].label} 추가 환산 용량 (${effectiveSedative(keys[0]).unit})` : '추가 환산 용량';
       $('comparisonMixtures').innerHTML = keys.slice(1).filter(k => !usesAutomaticMix(k)).map(k => {
-        const drug = sedatives[k];
+        const drug = effectiveSedative(k);
         const mix = comparisonMixtures[k] || { mg: '', ml: '' };
         comparisonMixtures[k] = mix;
         return `<div class="drug-note"><b>${escapeHtml(drug.label)} 별도 혼합액</b><div class="row"><div class="field"><label for="compare_${k}_mg">1배 총 약물량 (mg)</label><input id="compare_${k}_mg" type="number" inputmode="decimal" min="0.01" step="any" value="${escapeHtml(mix.mg)}" data-drug="${k}" data-mix="mg"></div><div class="field"><label for="compare_${k}_ml">최종 혼합 부피 (mL)</label><input id="compare_${k}_ml" type="number" inputmode="decimal" min="0.01" step="any" value="${escapeHtml(mix.ml)}" data-drug="${k}" data-mix="ml"></div></div></div>`;
@@ -474,10 +544,12 @@
     }
     function calcSed() {
       const keys = selectedSedativeKeys();
+      if (keys.length) $('rateDoseLabel').textContent = `${sedatives[keys[0]].label} 추가 환산 용량 (${effectiveSedative(keys[0]).unit})`;
+      document.querySelector('label[for="mixMultiplier"]').textContent = $('mixtureMode').value === 'auto' ? 'MDZ/Ket mix 배수' : '직접 혼합액 배수 (N)';
       updateMixtureInputs();
-      calcBodyMetrics(); calcShooting(); calcAutoMixtures();
+      calcBodyMetrics(); calcShooting(); calcAutoMixtures(); renderEvidenceMetrics();
       $('sedNotes').innerHTML = keys.map(k => {
-        const drug = sedatives[k];
+        const drug = effectiveSedative(k);
         return `<div class="drug-note" style="border-left-color:${drug.color || '#1f6fb7'}"><b>${escapeHtml(drug.label)}</b><br>${escapeHtml(drug.notes)}</div>`;
       }).join('');
       let dw, conc, dose, rate;
@@ -486,7 +558,7 @@
         dw = selectedWeight('dosingWeight');
         dose = SECore.positive($('rateDose').value, 'Rate dose');
         const mix = mixtureForDrug(keys[0], dw);
-        rate = SECore.infusion(dose, sedatives[keys[0]].unit, dw, mix?.mg, mix?.ml);
+        rate = SECore.infusion(dose, effectiveSedative(keys[0]).unit, dw, mix?.mg, mix?.ml);
         conc = rate.concentration;
       } catch (error) {
         ['dwOut','concOut','rateOut','rangeOut','unitOut'].forEach(id => { $(id).textContent = '—'; });
@@ -496,14 +568,14 @@
         return;
       }
       $('sedError').classList.add('hidden');
-      const primaryRange = sedatives[keys[0]].table;
-      $('sedDoseWarning').textContent = dose < primaryRange.min || dose > primaryRange.max ? '선택 약제의 표시 범위를 벗어난 입력입니다. 단위와 기관 프로토콜을 확인하세요.' : '';
+      const primaryRange = effectiveSedative(keys[0]).table;
+      $('sedDoseWarning').textContent = (dose < primaryRange.min || dose > primaryRange.max) && dose !== selectedEvidence(keys[0])?.startDose ? '선택 약제의 표시 범위를 벗어난 입력입니다. 단위와 기관 프로토콜을 확인하세요.' : '';
       $('dwOut').textContent = `${round(dw,1)} kg`;
       $('concOut').textContent = `${round(conc,2)} mg/mL`;
       $('rateOut').textContent = `${round(rate.mlHr,1)} mL/hr`;
-      $('rangeOut').textContent = keys.map(k => `${sedatives[k].label}: ${sedatives[k].range}`).join(' · ');
-      $('unitOut').textContent = `${dose} ${sedatives[keys[0]].unit}`;
-      const activeDrug = sedatives[keys[0]];
+      $('rangeOut').textContent = keys.map(k => `${sedatives[k].label}: ${effectiveSedative(k).range}`).join(' · ');
+      $('unitOut').textContent = `${dose} ${effectiveSedative(keys[0]).unit}`;
+      const activeDrug = effectiveSedative(keys[0]);
       $('sedQuick').innerHTML = activeDrug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${activeDrug.label} ${x} ${activeDrug.unit}</button>`).join('');
       $('sedQuick').querySelectorAll('button').forEach(b => b.onclick = () => { $('rateDose').value = b.dataset.dose; calcSed(); });
     }
@@ -588,14 +660,14 @@
       $('newCase').addEventListener('click', () => applyPatientProfile(''));
       $('fluidPreset').addEventListener('change', calcSed);
       $('mixMl').addEventListener('input', calcSed);
-      $('mixtureMode').addEventListener('change', () => { renderComparisonMixtures(); calcSed(); });
+      $('mixtureMode').addEventListener('change', () => { renderComparisonMixtures(); renderEvidenceControls(); if (SEEvidence.profiles[selectedSedatives[0]]) $('rateDose').value = effectiveSedative(selectedSedatives[0]).quick[0]; calcSed(); });
       ['wt','ht','sex','dosingWeight','baseMixMg','rateDose'].forEach(id => $(id).addEventListener('input', calcSed));
       $('mixMultiplier').addEventListener('input', changeMixMultiplier);
       $('scaledMixResults').addEventListener('input', event => {
         const key = event.target.dataset.flowDrug;
         if (!sedatives[key]) return;
         infusionFlows[key] = event.target.value;
-        try { oneTimesFlows[key] = SECore.flowForMultiplier(infusionFlows[key], $('mixMultiplier').value, 1); }
+        try { oneTimesFlows[key] = SECore.flowForMultiplier(infusionFlows[key], mixtureFactor(key), 1); }
         catch { oneTimesFlows[key] = null; }
         renderFlowMetrics();
       });
@@ -608,13 +680,36 @@
           const mix = comparisonMixtures[primary] || { mg: '', ml: '' };
           $('baseMixMg').value = mix.mg;
           $('mixMl').value = mix.ml;
-          $('rateDose').value = sedatives[primary].quick[0];
+          $('rateDose').value = effectiveSedative(primary).quick[0];
         }
-        renderComparisonMixtures(); calcSed();
+        renderComparisonMixtures(); renderEvidenceControls(); calcSed();
       });
       $('comparisonMixtures').addEventListener('input', event => {
         if (!event.target.dataset.drug) return;
         comparisonMixtures[event.target.dataset.drug][event.target.dataset.mix] = event.target.value;
+        calcSed();
+      });
+      $('evidenceControls').addEventListener('change', event => {
+        const key = event.target.dataset.evidenceKey, field = event.target.dataset.evidenceField;
+        if (!SEEvidence.profiles[key]) return;
+        const state = evidenceSelection(key);
+        if (field === 'profile') {
+          const profile = SEEvidence.profiles[key].find(p => p.id === event.target.value);
+          if (!profile) return;
+          Object.assign(state,{ profile: profile.id, dose: profile.defaultDose, load: profile.defaultLoad });
+          if (key === selectedSedatives[0]) $('rateDose').value = profile.defaultDose;
+          renderEvidenceControls();
+        } else if (['dose','load','concentration','volume'].includes(field)) {
+          const profile = selectedEvidence(key), prep = SEEvidence.preparations[key];
+          const values = { dose: profile.doses, load: profile.loads, concentration: prep.concentrations, volume: prep.volumes }[field];
+          const value = Number(event.target.value);
+          if (!values.includes(value)) return;
+          if (field === 'concentration') {
+            const previous = state.concentration;
+            try { infusionFlows[key] = String(Number((SECore.flowForMultiplier(infusionFlows[key],previous,value)).toPrecision(12))); oneTimesFlows[key] = Number(infusionFlows[key]); } catch { /* Leave invalid flow for validation. */ }
+          }
+          state[field] = value;
+        }
         calcSed();
       });
       $('asmDrug').addEventListener('change', updateAsmDoseOptions);
