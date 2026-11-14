@@ -5,7 +5,7 @@ test('deployed calculator displays the release and works online and offline', as
   page.on('pageerror', error => errors.push(error.message));
   const response = await page.goto('./');
   expect(response.status()).toBe(200);
-  await expect(page.locator('#appVersion')).toContainText('v0.5.0');
+  await expect(page.locator('#appVersion')).toContainText('v0.5.1');
   await expect(page.locator('#wt')).toHaveValue('');
   await page.locator('#wt').fill('60');
   await expect(page.locator('#ht')).toHaveValue('');
@@ -92,4 +92,43 @@ test('deployed calculator displays the release and works online and offline', as
   expect(errors).toEqual([]);
   fs.writeFileSync('artifacts/deployed-web-browser.json', JSON.stringify({ url: page.url(), version: await page.locator('#appVersion').textContent(), checks: ['three automatic product preparations', 'source-native dose and loading selection', 'dated evidence history and offline evidence data', 'visible full flow overview', 'ASM-specific warning flags without dose change', 'weight only', '1x at 100 mL = 60 mg and 0.1 mg/kg/hr at 10 mL/hr', '40 mL/hr = 0.4 mg/kg/hr and 960 mL/24 hr', '100 mL bag: 2.5 hr; 1 L: 25 hr', '2x preserves 0.4 mg/kg/hr at 20 mL/hr and 480 mL/24 hr', 'all-volume 1x mixture', '10x at 1 L = 6000 mg and 0.1 mg/kg/hr at 1 mL/hr', 'shooting independent of mix factor', 'ASM 3600 mg', 'mg PE units', 'STESS 6/6', 'offline navigation', 'invalid input clears result'], pageErrors: errors, clinicalApproval: false }, null, 2) + '\n');
   console.log('Deployed browser checks passed: automatic evidence doses for all three sedatives, source-native units, dated history, visible full flow overview, integrated ASM warning flags, weight-only mixtures, flow titration, daily fluid, bag time, dose-preserving multiplier, separate shooting and offline navigation.');
+});
+
+test('published PWA resources and supporting pages have valid responses and local links', async ({ page, request, baseURL }) => {
+  await page.goto('./');
+  const root = new URL(baseURL);
+  const declared = await page.locator('script[src], link[href]').evaluateAll(nodes => nodes.map(node => node.src || node.href));
+  const externalLinks = await page.locator('a[href]').evaluateAll(nodes => nodes
+    .filter(node => new URL(node.href).origin !== location.origin)
+    .map(node => ({href:node.href,target:node.target,rel:node.rel})));
+  for (const link of externalLinks) {
+    expect(new URL(link.href).protocol,link.href).toBe('https:');
+    if (link.target === '_blank') expect(link.rel.split(/\s+/),link.href).toContain('noopener');
+  }
+  const manifestResponse = await request.get(new URL('manifest.webmanifest', root).href);
+  expect(manifestResponse.status()).toBe(200);
+  const manifest = await manifestResponse.json();
+  const resources = new Set([...declared, 'sw.js', 'privacy.html', 'support.html', ...manifest.icons.map(icon => icon.src)]
+    .map(value => new URL(value, root).href).filter(value => new URL(value).origin === root.origin));
+  for (const url of resources) {
+    const response = await request.get(url);
+    expect(response.status(), url).toBe(200);
+    const extension = new URL(url).pathname.split('.').pop();
+    const mime = { js: /(?:java|ecma)script/, css: /text\/css/, svg: /image\/svg\+xml/, png: /image\/png/, html: /text\/html/, webmanifest: /(?:manifest\+)?json/ }[extension];
+    if (mime) expect(response.headers()['content-type'], url).toMatch(mime);
+    expect((await response.body()).length, url).toBeGreaterThan(0);
+  }
+  for (const [path,title] of [['privacy.html','개인정보 처리방침'],['support.html','지원 및 오류 제보']]) {
+    await page.goto(new URL(path,root).href);
+    await expect(page.locator('h1')).toHaveText(title);
+    if (path === 'support.html') await expect(page.locator('h2').first()).toContainText('0.5.1');
+    else await expect(page.locator('article p').first()).toContainText('개인정보 처리방침');
+    const localLinks = await page.locator('a[href]').evaluateAll(nodes => nodes.map(node => node.href).filter(value => new URL(value).origin === location.origin));
+    for (const url of localLinks) expect((await request.get(url)).status(),url).toBe(200);
+    await page.getByRole('link',{name:'계산기로 돌아가기'}).click();
+    await expect(page.locator('#appVersion')).toContainText('v0.5.1');
+  }
+  fs.mkdirSync('artifacts',{recursive:true});
+  fs.writeFileSync('artifacts/deployed-web-resources.json',JSON.stringify({url:root.href,resources:[...resources],externalLinkSyntaxAndTabSafety:true,checkedAt:new Date().toISOString(),supportingPages:true},null,2)+'\n');
+  console.log(`Published resources passed: ${resources.size} declared/PWA files and privacy/support navigation.`);
 });
