@@ -68,7 +68,7 @@ test('existing browser cases remain available after the web update', async ({ pa
   await expect(page.locator('#patientSelect')).toHaveValue('legacy-case');
   await expect(page.locator('#wt')).toHaveValue('60');
   await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
-  await expect(page.locator('#appVersion')).toContainText('v0.5.0');
+  await expect(page.locator('#appVersion')).toContainText('v0.5.1');
 });
 
 test('legacy v8 PWA waits for user action before activating the new cache', async ({ page }) => {
@@ -103,7 +103,7 @@ test('legacy v8 PWA waits for user action before activating the new cache', asyn
     await Promise.all([page.waitForEvent('load'), page.locator('#applyUpdate').click()]);
     await page.waitForFunction(async () => {
       const names = await caches.keys();
-      return names.includes('se-calculator-0.5.0-web-20261022-1') && !names.includes('se-calculator-2026-07-v8');
+      return names.includes('se-calculator-0.5.1-web-security-1') && !names.includes('se-calculator-2026-07-v8');
     });
     await fillPatient(page);
     await expect(page.locator('#rateOut')).toHaveText('10 mL/hr');
@@ -489,4 +489,87 @@ test('primary evidence changes reset the optional converter with the matching un
   await expect(page.locator('#rateDoseLabel')).toContainText('mcg/kg/min');
   await expect(page.locator('#rateDose')).toHaveValue('20');
   await expect(page.locator('#rateOut')).toHaveText('7.2 mL/hr');
+});
+
+for (const entry of ['import', 'editor']) {
+  test(`Admin ${entry} renders stored drug labels as text without executing markup`, async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#wt').fill('60');
+    const config = await page.evaluate(() => ({
+      sedatives: JSON.parse(document.getElementById('sedativeConfig').value),
+      asms: JSON.parse(document.getElementById('asmConfig').value)
+    }));
+    const label = '<img src="data:image/gif;base64,broken" onerror="window.__drugLabelExecuted=true"> & "test"';
+    config.sedatives.midazolam.label = label;
+    await page.locator('[data-tab="admin"]').click();
+    if (entry === 'import') {
+      await page.locator('#importConfig').fill(JSON.stringify(config));
+      await page.locator('#applyImport').click();
+      await expect(page.locator('#adminStatus')).toContainText('Imported');
+    } else {
+      await page.locator('#sedativeConfig').fill(JSON.stringify(config.sedatives));
+      await page.locator('#saveConfig').click();
+      await expect(page.locator('#adminStatus')).toContainText('Saved');
+    }
+    expect(await page.evaluate(() => window.__drugLabelExecuted)).toBeUndefined();
+    await expect(page.locator('#sedQuick img')).toHaveCount(0);
+    await expect(page.locator('#sedQuick button').first()).toHaveText(`${label} 0.05 mg/kg/hr`);
+    await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
+    await page.reload();
+    await page.locator('#wt').fill('60');
+    expect(await page.evaluate(() => window.__drugLabelExecuted)).toBeUndefined();
+    await expect(page.locator('#sedQuick img')).toHaveCount(0);
+    await expect(page.locator('#sedQuick button').first()).toHaveText(`${label} 0.05 mg/kg/hr`);
+    await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
+  });
+}
+
+test('switching and deleting synthetic cases preserves the other stored case and clears prior planning', async ({ page }) => {
+  const configStorageKey = 'se-calculator-admin-config-v1';
+  await page.goto('/');
+  const configBefore = await page.evaluate(key=>localStorage.getItem(key),configStorageKey);
+  await page.locator('#caseOptions summary').click();
+  for (const [name,weight] of [['Monthly demo A','60'],['Monthly demo B','80']]) {
+    await page.locator('#newCase').click();
+    await page.locator('#wt').fill(weight); await page.locator('#patientName').fill(name);
+    await page.locator('#savePatient').click();
+  }
+  const options = await page.locator('#patientSelect option').evaluateAll(nodes=>nodes.filter(node=>node.value).map(node=>({id:node.value,label:node.textContent})));
+  const a = options.find(option=>option.label.includes('Monthly demo A'));
+  const b = options.find(option=>option.label.includes('Monthly demo B'));
+  await page.locator('#flowDetails summary').click();
+  await page.locator('#midazolamFlow').fill('40'); await page.locator('#mixMultiplier').selectOption('2');
+  await page.locator('#patientSelect').selectOption(a.id);
+  await expect(page.locator('#wt')).toHaveValue('60');
+  await expect(page.locator('#mixMultiplier')).toHaveValue('1');
+  await expect(page.locator('#midazolamFlow')).toHaveValue('10');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
+  await page.locator('#patientSelect').selectOption(b.id);
+  await expect(page.locator('#wt')).toHaveValue('80');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('400 mg');
+  await page.locator('#deletePatient').click();
+  await expect(page.locator('#wt')).toHaveValue('');
+  await expect(page.locator('#patientSelect option[value="'+a.id+'"]')).toHaveCount(1);
+  await expect(page.locator('#patientSelect option[value="'+b.id+'"]')).toHaveCount(0);
+  await page.reload();
+  await page.locator('#caseOptions summary').click(); await page.locator('#patientSelect').selectOption(a.id);
+  await expect(page.locator('#wt')).toHaveValue('60');
+  expect(await page.evaluate(key=>localStorage.getItem(key),configStorageKey)).toBe(configBefore);
+});
+
+test('reserved configuration keys cannot poison the saved configuration or calculator state', async ({ page }) => {
+  const errors=[]; page.on('pageerror',error=>errors.push(error.message));
+  await page.goto('/'); await page.locator('#wt').fill('60');
+  const config = await page.evaluate(() => {
+    const sedatives=JSON.parse(document.getElementById('sedativeConfig').value);
+    return {sedatives:{constructor:{...sedatives.midazolam,label:'Synthetic reserved key'}},asms:JSON.parse(document.getElementById('asmConfig').value),selectedSedatives:['constructor']};
+  });
+  await page.locator('[data-tab="admin"]').click();
+  await page.locator('#importConfig').fill(JSON.stringify(config)); await page.locator('#applyImport').click();
+  await expect(page.locator('#adminStatus')).toContainText('Import failed');
+  expect(await page.evaluate(()=>localStorage.getItem('se-calculator-admin-config-v1'))).toBeNull();
+  await page.reload(); await page.locator('#wt').fill('60');
+  await expect(page.locator('#midazolamMixMg')).toHaveText('300 mg');
+  await expect(page.locator('#rateOut')).toHaveText('20 mL/hr');
+  expect(errors).toEqual([]);
 });

@@ -576,7 +576,7 @@
       $('rangeOut').textContent = keys.map(k => `${sedatives[k].label}: ${effectiveSedative(k).range}`).join(' · ');
       $('unitOut').textContent = `${dose} ${effectiveSedative(keys[0]).unit}`;
       const activeDrug = effectiveSedative(keys[0]);
-      $('sedQuick').innerHTML = activeDrug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${activeDrug.label} ${x} ${activeDrug.unit}</button>`).join('');
+      $('sedQuick').innerHTML = activeDrug.quick.map(x => `<button class="pill ${x == dose ? 'active':''}" data-dose="${x}">${escapeHtml(activeDrug.label)} ${x} ${activeDrug.unit}</button>`).join('');
       $('sedQuick').querySelectorAll('button').forEach(b => b.onclick = () => { $('rateDose').value = b.dataset.dose; calcSed(); });
     }
     function updateAsmDoseOptions() {

@@ -96,13 +96,14 @@
   }
   function validateConfig(config) {
     const text = (value) => typeof value === 'string' && value.length > 0 && value.length < 12000;
+    const identifier = value => /^[a-z][a-z0-9_]{0,39}$/.test(value) && !['constructor', 'prototype', '__proto__'].includes(value);
     const numbers = (values) => Array.isArray(values) && values.length > 0 && values.length < 101 && values.every(v => typeof v === 'number' && Number.isFinite(v) && v > 0);
     for (const group of ['sedatives', 'asms']) {
       if (!config?.[group] || typeof config[group] !== 'object' || Array.isArray(config[group])) throw new Error(`${group} 설정을 확인하세요.`);
       const entries = Object.entries(config[group]);
       if (!entries.length || entries.length > 30) throw new Error('약제 수를 확인하세요.');
       for (const [key, drug] of entries) {
-        if (!/^[a-z][a-z0-9_]{0,39}$/.test(key) || !drug || !text(drug.label)) throw new Error('약제 이름을 확인하세요.');
+        if (!identifier(key) || !drug || !text(drug.label)) throw new Error('약제 이름을 확인하세요.');
         if (group === 'sedatives') {
           positive(drug.load, 'Loading');
           if (!['mg/kg/hr', 'mcg/kg/min'].includes(drug.unit) || !numbers(drug.quick) || !text(drug.notes) || !text(drug.range) || !/^#[0-9a-f]{6}$/i.test(drug.color)) throw new Error('Sedative 단위/범위를 확인하세요.');
@@ -115,7 +116,7 @@
       }
     }
     if (config.selectedSedatives && (!Array.isArray(config.selectedSedatives) || config.selectedSedatives.some(k => !Object.hasOwn(config.sedatives, k)))) throw new Error('선택 약제를 확인하세요.');
-    if (config.warningItems && (!Array.isArray(config.warningItems) || config.warningItems.length > 30 || config.warningItems.some(item => !Array.isArray(item) || item.length !== 3 || !/^[a-z][a-z0-9_]{0,39}$/.test(item[0]) || !text(item[1]) || !text(item[2])))) throw new Error('Warning 항목을 확인하세요.');
+    if (config.warningItems && (!Array.isArray(config.warningItems) || config.warningItems.length > 30 || config.warningItems.some(item => !Array.isArray(item) || item.length !== 3 || !identifier(item[0]) || !text(item[1]) || !text(item[2])))) throw new Error('Warning 항목을 확인하세요.');
     if (config.evidenceText != null && !text(config.evidenceText)) throw new Error('근거 문구를 확인하세요.');
     return config;
   }

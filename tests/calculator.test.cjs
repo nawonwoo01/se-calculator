@@ -102,3 +102,20 @@ test('product-based automatic mixtures and source-native doses have independent 
   for (const invalid of ['',0,-1,Infinity,NaN]) assert.throws(()=>core.fixedMixture(invalid,100));
   assert.throws(()=>core.fixedMixture(10,1e308));
 });
+
+
+test('configuration validation rejects reserved object keys before applying stored settings', () => {
+  const valid = {
+    sedatives: { demo: {label:'Synthetic demo',load:1,unit:'mg/kg/hr',range:'Synthetic range',quick:[1],table:{min:1,max:1,step:1},notes:'Synthetic notes',color:'#123456'} },
+    asms: { demo: {label:'Synthetic demo',doses:[1],max:1,unit:'mg',minutes:1,note:'Synthetic notes'} }
+  };
+  assert.equal(core.validateConfig(valid),valid);
+  for (const key of ['constructor','prototype','__proto__']) {
+    for (const group of ['sedatives','asms']) {
+      const candidate = structuredClone(valid);
+      candidate[group] = Object.fromEntries([[key,candidate[group].demo]]);
+      assert.throws(()=>core.validateConfig(candidate));
+    }
+    assert.throws(()=>core.validateConfig({...structuredClone(valid),warningItems:[[key,'Synthetic flag','Synthetic message']]}));
+  }
+});
